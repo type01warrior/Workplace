@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mono Cool – Cloud Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Lexend:wght@400;700&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Lexend', sans-serif;
+    font-size: 11px;
+    background: #ECEFF4;
+    padding: 10px;
+    min-width: 1200px;
+    color: #0D1B26;
+  }
+
+  .page {
+    background: #ECEFF4;
+    padding: 8px;
+    max-width: 1400px;
+    margin: auto;
+  }
+
+  /* ===== COLOR PALETTE ===== */
+  .bg-red    { background-color: #1C2B3A; }
+  .bg-blue   { background-color: #2E4A62; }
+  .bg-gray   { background-color: #DDE4EC; }
+  .bg-dark   { background-color: #CC4125; }
+  .bg-orange { background-color: #F6B26B; }
+  .bg-yellow { background-color: #FFD966; }
+  .bg-green  { background-color: #93C47D; }
+  .bg-teal   { background-color: #76A5AF; }
+  .bg-indigo { background-color: #6D9EEB; }
+  .bg-purple { background-color: #8E7CC3; }
+  .bg-pink   { background-color: #C27BA0; }
+  .bg-lblue  { background-color: #6FA8DC; }
+
+  /* ===== TABLES ===== */
+  table { border-collapse: collapse; width: 100%; }
+  td, th {
+    border: 1px solid #bbb;
+    padding: 2px 4px;
+    font-family: 'Lexend', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-align: center;
+  }
+  td.left { text-align: left; }
+
+  /* ===== INPUTS ===== */
+  input[type="text"], input[type="time"], input[type="number"] {
+    font-family: 'Lexend', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: center;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="text"]:focus, input[type="time"]:focus, input[type="number"]:focus {
+    background: #ffffcc;
+    border-radius: 2px;
+  }
+  input[type="checkbox"] {
+    width: 14px; height: 14px; cursor: pointer;
+  }
+  /* Duration input — HH:MM, no AM/PM */
+  input.dur {
+    font-family: 'Lexend', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    border: none;
+    background: #CDD6E0;
+    width: 100%;
+    text-align: center;
+    outline: none;
+    cursor: pointer;
+    padding: 2px 2px;
+    letter-spacing: 1px;
+    box-sizing: border-box;
+  }
+  input.dur:focus { background: #ffffcc; border-radius: 2px; }
+  input.dur.invalid { color: red; background: #ffe0e0; }
+
+  /* ===== COMPUTED cells ===== */
+  .computed { cursor: default; }
+
+  /* ===== SECTION GAPS ===== */
+  .gap { height: 6px; }
+
+  /* ===== SECTION WRAPPERS ===== */
+  .sections {
+    display: grid;
+    grid-template-columns: 1fr 14px 1fr 14px 1fr 14px 1fr;
+    gap: 0;
+  }
+  .divider { width: 14px; }
+
+  /* ===== TOGGLE BUTTON ===== */
+  .toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #6FA8DC;
+    border: none;
+    border-radius: 12px;
+    padding: 3px 10px;
+    cursor: pointer;
+    font-family: 'Lexend', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: #000;
+  }
+  .toggle-btn .dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #333;
+    flex-shrink: 0;
+  }
+  .toggle-btn.billing { background: #E06666; }
+
+  /* ===== DAILY/WEEKLY CARD ===== */
+  .dw-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin: 4px 0 8px 0;
+  }
+  .dw-card table { width: 100%; }
+  .dw-card td { font-size: 10px; font-weight: 700; }
+
+
+  /* ===== TABLE CARDS ===== */
+  .tcard {
+    background: #FFFFFF;
+    border: 1px solid #1C2B3A;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 3px 3px 0 #1C2B3A;
+    margin-bottom: 8px;
+  }
+  .tcard table { width: 100%; border-collapse: collapse; }
+  .tcard td, .tcard th { border-color: #B0BCC8; }
+  /* Fill corner cells with matching radius so color doesn't get clipped */
+  .tcard table tr:first-child td:first-child { border-top-left-radius: 5px; }
+  .tcard table tr:first-child td:last-child  { border-top-right-radius: 5px; }
+  .tcard table tr:last-child  td:first-child { border-bottom-left-radius: 5px; }
+  .tcard table tr:last-child  td:last-child  { border-bottom-right-radius: 5px; }
+
+  body.dark .tcard {
+    background: #1a1a1a;
+    border-color: #333;
+    box-shadow: 3px 3px 0 #111;
+  }
+  body.dark .tcard td, body.dark .tcard th { border-color: #333; background-color: #1a1a1a; }
+
+  /* ===== TOP BAR ===== */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    background: #1C2B3A;
+    border-radius: 4px 4px 0 0;
+    flex-wrap: nowrap;
+    margin-bottom: 4px;
+  }
+  body.dark .top-bar { background: #1a6ea8; }
+  .top-name {
+    font-family: 'Lexend', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    color: #E8F0F8;
+    white-space: nowrap;
+  }
+  .top-info {
+    font-family: 'Lexend', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: #E8F0F8;
+    white-space: nowrap;
+  }
+  .top-time {
+    font-family: 'Lexend', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: #E8F0F8;
+    white-space: nowrap;
+  }
+  .top-week {
+    font-family: 'Lexend', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    color: #E8F0F8;
+    white-space: nowrap;
+    margin-left: auto;
+  }
+  .top-divider { color: #000; opacity: 0.4; font-size: 10px; }
+
+  /* ===== WEEKOFF BAR ===== */
+  .weekoff-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 4px;
+  }
+  body.dark .weekoff-bar { background: #2a2a2a; border-color: #444; }
+  .weekoff-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #000;
+    white-space: nowrap;
+  }
+  body.dark .weekoff-label { color: #e8e8e8; }
+  .weekoff-pills { display: flex; gap: 4px; }
+  .wo-pill {
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Lexend', sans-serif;
+    cursor: pointer;
+    background: #ddd;
+    color: #555;
+    border: 1px solid #bbb;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .wo-pill.active {
+    background: #1C2B3A;
+    color: #000;
+    border-color: #c0392b;
+  }
+  body.dark .wo-pill { background: #333; color: #aaa; border-color: #555; }
+  body.dark .wo-pill.active { background: #c0392b; color: #000; }
+
+  /* ===== MAIN TABLE ===== */ */
+  .main-section { margin-bottom: 6px; }
+
+  /* section headers */
+  .sec-header {
+    background: #E06666;
+    color: #000;
+    font-weight: 700;
+    font-size: 11px;
+    text-align: center;
+    padding: 3px 6px;
+    border: 1px solid #bbb;
+  }
+
+  /* total row */
+  .total-used { background: #6FA8DC; }
+  .total-used td { background-color: #6FA8DC !important; color: #0D1B26 !important; }
+  .total-balance { background: #1C2B3A; }
+
+  /* ===== SIDE PANELS ===== */
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 8px 1fr;
+    gap: 0;
+    margin-top: 6px;
+  }
+
+  /* ===== UTIL ===== */
+  .negative { color: red; }
+  .positive { color: #1a7a1a; }
+
+  /* ===== AHT section ===== */
+  .aht-table td { font-family: 'Lexend', sans-serif; }
+
+  /* small label */
+  .vol-label {
+    font-family: 'Lexend', sans-serif;
+    font-size: 8px;
+    color: #F6F8F9;
+    background: transparent;
+  }
+
+  /* scrollable wrapper */
+  .scroll-wrap {
+    overflow-x: auto;
+  }
+
+  /* ===== REFRESH badge ===== */
+  .refresh-badge {
+    font-size: 9px;
+    color: #666;
+    border: 1px solid #ccc;
+    padding: 1px 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #fff;
+    margin-left: auto;
+  }
+  .refresh-badge:hover { background: #f0f0f0; }
+
+  td.input-cell { background: #CDD6E0; padding: 0; }
+  td.input-cell input { padding: 2px 4px; background: #CDD6E0; }
+
+  .logout-input { background: #D9D9D9 !important; }
+
+  /* ===== DARK / LIGHT MODE ===== */
+  :root {
+    --bg-page: #f0f0f0;
+    --bg-card: #ffffff;
+    --border: #bbb;
+    --text: #000000;
+    --bg-input: #D9D9D9;
+    --bg-red: #E06666;
+    --bg-blue: #6FA8DC;
+    --bg-gray: #D9D9D9;
+    --shadow: rgba(0,0,0,0.15);
+    --cell-bg: #ffffff;
+    --header-text: #000000;
+  }
+  body.dark {
+    --bg-page: #0d0d0d;
+    --bg-card: #1a1a1a;
+    --border: #333;
+    --text: #000000;
+    --bg-input: #2e2e2e;
+    --bg-red: #c0392b;
+    --bg-blue: #1a6ea8;
+    --bg-gray: #2e2e2e;
+    --shadow: rgba(0,0,0,0.8);
+    --cell-bg: #222222;
+    --header-text: #000000;
+  }
+  body { background: var(--bg-page); color: var(--text); }
+  .page { background: var(--bg-page); }
+
+  /* All td/th get dark cell bg in dark mode */
+  td, th { border-color: var(--border); color: var(--text); background-color: #ffffff; }
+  body.dark td, body.dark th { background-color: #1a1a1a; color: #e8e8e8; border-color: var(--border); }
+
+  /* Colored cells stay colored, text black */
+  .bg-red  { background-color: var(--bg-red) !important; }
+  .bg-blue { background-color: var(--bg-blue) !important; }
+  .bg-gray { background-color: var(--bg-gray) !important; }
+  body.dark .bg-red, body.dark td.bg-red  { background-color: var(--bg-red) !important; color: #000 !important; }
+  body.dark .bg-blue, body.dark td.bg-blue { background-color: var(--bg-blue) !important; color: #000 !important; }
+  body.dark tr.bg-gray td { background-color: var(--bg-gray) !important; color: #000 !important; }
+  body.dark tr.total-used td { background-color: var(--bg-blue) !important; color: #000 !important; }
+  body.dark tr.total-balance td { background-color: var(--bg-red) !important; color: #000 !important; }
+  body.dark tr.bg-red td { background-color: var(--bg-red) !important; color: #000 !important; }
+
+  /* Input cells */
+  td.input-cell { background: var(--bg-input) !important; }
+  td.input-cell input { background: var(--bg-input) !important; color: var(--text); }
+  input.dur { background: var(--bg-input) !important; color: var(--text); }
+  body.dark td.input-cell { background: var(--bg-input) !important; }
+  body.dark td.input-cell input { background: var(--bg-input) !important; color: #e8e8e8; }
+  body.dark input.dur { background: var(--bg-input) !important; color: #e8e8e8; }
+  body.dark input[type="number"], body.dark input[type="time"], body.dark input[type="text"] { color: #e8e8e8; background: var(--bg-input); }
+
+  /* Header elements */
+  .name-badge { border-color: var(--border); color: var(--text); }
+  .week-label { border-color: var(--border); color: var(--text); background: var(--bg-card); }
+  .refresh-badge { background: var(--bg-card); color: var(--text); border-color: var(--border); }
+  .refresh-badge:hover { background: var(--bg-input); }
+  body.dark .name-badge { color: #e8e8e8; border-color: var(--border); background: var(--bg-card); }
+  body.dark .week-label { color: #e8e8e8; background: var(--bg-card); }
+  body.dark .refresh-badge { color: #e8e8e8; background: var(--bg-card); }
+  body.dark .time-now { background: var(--bg-blue); color: #000; }
+  body.dark .toggle-btn { color: #000; }
+  body.dark .page { background: var(--bg-card); }
+
+  /* ===== DARK MODE TOGGLE PILL ===== */
+  .dm-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    background: #ddd;
+    border-radius: 20px;
+    padding: 2px;
+    cursor: pointer;
+    border: 1px solid #bbb;
+    transition: background 0.3s;
+    user-select: none;
+  }
+  body.dark .dm-toggle { background: #333; border-color: #555; }
+  .dm-toggle .pill-option {
+    padding: 3px 10px;
+    border-radius: 16px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Lexend', sans-serif;
+    transition: background 0.2s, color 0.2s;
+    color: #888;
+  }
+  .dm-toggle .pill-option.active {
+    background: white;
+    color: #000;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  body.dark .dm-toggle .pill-option.active {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  body.dark .dm-toggle .pill-option:not(.active) { color: #666; }
+
+
+  /* Hide number input spinners */
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+
+  /* ===== COMPACT BOTTOM CARDS ===== */
+  .tcard-compact { width: auto; display: inline-block; min-width: 0; }
+  .tcard-sync { width: 100%; }
+  .tcard-compact table { width: auto; min-width: 0; }
+  .tcard-compact td, .tcard-compact th {
+    padding: 1px 4px;
+    font-size: 9px;
+    line-height: 1.4;
+  }
+  .tcard-compact input[type="number"],
+  .tcard-compact input[type="text"],
+  .tcard-compact input.dur {
+    font-size: 9px;
+    padding: 1px 2px;
+  }
+</style>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ── PASTE YOUR FIREBASE CONFIG HERE ──
+  const firebaseConfig = {
+    apiKey: "AIzaSyASldBQnSrsfndgosK8KiAsvW_ANfuPUGg",
+    authDomain: "workplace-e22df.firebaseapp.com",
+    projectId: "workplace-e22df",
+    storageBucket: "workplace-e22df.firebasestorage.app",
+    messagingSenderId: "422342809927",
+    appId: "1:422342809927:web:fa1140369ee39deb689462"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // ── EXPOSE TO GLOBAL SCOPE ──
+  window._fbAuth = auth;
+  window._fbDb = db;
+  window._fbFns = { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut, updateProfile, doc, setDoc, getDoc, onSnapshot, getDocs, collection, query, where };
+
+  // ── SAVE user data to Firestore ──
+  window.saveUserData = async function() {
+    const user = auth.currentUser;
+    if (!user) return;
+    const days = ['sun','mon','tue','wed','thu'];
+    const durFields = ['prod','coach','meet','well','break','unavail'];
+    const data = { updatedAt: Date.now() };
+    days.forEach(d => {
+      durFields.forEach(f => {
+        const el = document.getElementById(`${f}_${d}`);
+        if (el) data[`${f}_${d}`] = el.value;
+      });
+      const chk = document.getElementById(`chk_${d}`);
+      if (chk) data[`chk_${d}`] = chk.checked;
+      const jobs = document.getElementById(`jobs_${d}`);
+      if (jobs) data[`jobs_${d}`] = jobs.value;
+    });
+    ['q_prod','q_coach','q_meet','q_well','q_jobs','daysLeft'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) data[id] = el.value;
+    });
+    try {
+      await window._fbFns.setDoc(window._fbFns.doc(db, 'userData', user.uid), data, { merge: true });
+    } catch(e) { console.warn('Save failed:', e); }
+  };
+
+  // ── LOAD user data from Firestore ──
+  window.loadUserData = async function(uid) {
+    try {
+      const snap = await window._fbFns.getDoc(window._fbFns.doc(db, 'userData', uid));
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const days = ['sun','mon','tue','wed','thu'];
+      const durFields = ['prod','coach','meet','well','break','unavail'];
+      days.forEach(d => {
+        durFields.forEach(f => {
+          const el = document.getElementById(`${f}_${d}`);
+          if (el && data[`${f}_${d}`] !== undefined) el.value = data[`${f}_${d}`];
+        });
+        const chk = document.getElementById(`chk_${d}`);
+        if (chk && data[`chk_${d}`] !== undefined) chk.checked = data[`chk_${d}`];
+        const jobs = document.getElementById(`jobs_${d}`);
+        if (jobs && data[`jobs_${d}`] !== undefined) jobs.value = data[`jobs_${d}`];
+      });
+      ['q_prod','q_coach','q_meet','q_well','q_jobs','daysLeft'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && data[id] !== undefined) el.value = data[id];
+      });
+      if (window.recalc) window.recalc();
+    } catch(e) { console.warn('Load failed:', e); }
+  };
+
+  // ── AUTH STATE LISTENER ──
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      document.getElementById('authOverlay').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      const displayName = user.displayName || user.email.split('@')[0];
+      const nameEl = document.querySelector('.top-name');
+      if (nameEl) nameEl.textContent = displayName;
+      await window.loadUserData(user.uid);
+      // auto-save every 30s
+      window._autoSaveInterval = setInterval(() => window.saveUserData(), 30000);
+    } else {
+      document.getElementById('authOverlay').style.display = 'flex';
+      document.getElementById('mainApp').style.display = 'none';
+      clearInterval(window._autoSaveInterval);
+    }
+  });
+</script>
+<style>
+
+/* ===== SETTINGS MODAL ===== */
+#settingsModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 8888;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Lexend', sans-serif;
+}
+#settingsModal.open { display: flex; }
+.settings-card {
+  background: #fff;
+  border: 1px solid #1C2B3A;
+  box-shadow: 4px 4px 0 #1C2B3A;
+  border-radius: 6px;
+  padding: 24px 28px;
+  width: 340px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.settings-card h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1C2B3A;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.settings-card h3 span {
+  cursor: pointer;
+  font-size: 16px;
+  opacity: 0.5;
+}
+.settings-card h3 span:hover { opacity: 1; }
+.settings-section {
+  font-size: 9px;
+  font-weight: 700;
+  color: #888;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin: 14px 0 8px;
+  border-bottom: 1px solid #DDE4EC;
+  padding-bottom: 4px;
+}
+.settings-save {
+  font-size: 9px;
+  color: #27ae60;
+  font-weight: 700;
+  margin-top: 6px;
+  min-height: 14px;
+}
+.settings-err {
+  font-size: 9px;
+  color: #c0392b;
+  font-weight: 700;
+  margin-top: 6px;
+  min-height: 14px;
+}
+
+
+/* ===== DATABASE TAB ===== */
+#dbTabPanel {
+  display: none;
+  margin-top: 6px;
+}
+#dbTabPanel.open { display: block; }
+.db-card {
+  background: #fff;
+  border: 1px solid #1C2B3A;
+  border-radius: 6px;
+  box-shadow: 3px 3px 0 #1C2B3A;
+  padding: 10px 12px;
+  font-family: 'Lexend', sans-serif;
+}
+.db-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.db-card-header h4 {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1C2B3A;
+  letter-spacing: 0.5px;
+}
+.db-entry {
+  border: 1px solid #DDE4EC;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+.db-entry-header {
+  background: #1C2B3A;
+  color: #E8F0F8;
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  letter-spacing: 0.4px;
+}
+.db-entry-header .db-del {
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 11px;
+}
+.db-entry-header .db-del:hover { opacity: 1; color: #ffaaaa; }
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9px;
+}
+.db-table th {
+  background: #DDE4EC;
+  color: #1C2B3A;
+  padding: 3px 6px;
+  text-align: center;
+  font-weight: 700;
+  border: 1px solid #B0BCC8;
+  font-size: 8px;
+}
+.db-table td {
+  padding: 3px 6px;
+  text-align: center;
+  border: 1px solid #DDE4EC;
+  color: #0D1B26;
+  background: #fff;
+}
+.db-table tr.db-total { background: #6FA8DC !important; }
+.db-table tr.db-total td { background: #6FA8DC !important; font-weight: 700; }
+.db-table tr.db-balance { background: #1C2B3A !important; }
+.db-table tr.db-balance td { background: #1C2B3A !important; color: #E8F0F8 !important; font-weight: 700; }
+.db-empty { text-align: center; color: #aaa; font-size: 9px; padding: 16px; }
+.db-push-msg { font-size: 9px; font-weight: 700; color: #27ae60; margin-left: 8px; }
+body.dark .db-card { background: #1a1a1a; border-color: #333; }
+body.dark .db-table td { background: #222; color: #e8e8e8; border-color: #333; }
+body.dark .db-table th { background: #2e2e2e; color: #e8e8e8; border-color: #444; }
+body.dark .db-entry { border-color: #333; }
+
+/* ===== AUTH OVERLAY ===== */
+#authOverlay {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  background: #ECEFF4;
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Lexend', sans-serif;
+}
+.auth-card {
+  background: #fff;
+  border: 1px solid #1C2B3A;
+  box-shadow: 4px 4px 0 #1C2B3A;
+  border-radius: 6px;
+  padding: 28px 32px;
+  width: 360px;
+  max-width: 95vw;
+}
+.auth-card h2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1C2B3A;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+.auth-card .auth-sub {
+  font-size: 9px;
+  color: #888;
+  margin-bottom: 18px;
+  letter-spacing: 0.3px;
+}
+.auth-field {
+  margin-bottom: 10px;
+}
+.auth-field label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  color: #1C2B3A;
+  margin-bottom: 3px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.auth-field input {
+  width: 100%;
+  padding: 7px 10px;
+  font-family: 'Lexend', sans-serif;
+  font-size: 11px;
+  border: 1px solid #1C2B3A;
+  border-radius: 4px;
+  background: #fff;
+  color: #0D1B26;
+  outline: none;
+  transition: box-shadow 0.15s;
+}
+.auth-field input:focus {
+  box-shadow: 2px 2px 0 #1C2B3A;
+}
+.auth-btn {
+  width: 100%;
+  padding: 9px;
+  margin-top: 6px;
+  font-family: 'Lexend', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  background: #1C2B3A;
+  color: #E8F0F8;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  box-shadow: 2px 2px 0 #0d1826;
+  transition: opacity 0.15s;
+}
+.auth-btn:hover { opacity: 0.88; }
+.auth-btn.secondary {
+  background: transparent;
+  color: #1C2B3A;
+  border: 1px solid #1C2B3A;
+  box-shadow: none;
+  margin-top: 8px;
+  font-size: 9px;
+}
+.auth-switch {
+  text-align: center;
+  margin-top: 14px;
+  font-size: 9px;
+  color: #555;
+}
+.auth-switch a {
+  color: #1C2B3A;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.auth-error {
+  font-size: 9px;
+  color: #c0392b;
+  margin-top: 6px;
+  min-height: 14px;
+  font-weight: 700;
+}
+.auth-success {
+  font-size: 9px;
+  color: #27ae60;
+  margin-top: 6px;
+  min-height: 14px;
+  font-weight: 700;
+}
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 18px;
+  border: 1px solid #1C2B3A;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.auth-tab {
+  flex: 1;
+  padding: 6px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  color: #1C2B3A;
+  letter-spacing: 0.4px;
+  transition: background 0.15s;
+}
+.auth-tab.active {
+  background: #1C2B3A;
+  color: #E8F0F8;
+}
+</style>
+</head>
+<body>
+<!-- ===== AUTH OVERLAY ===== -->
+<div id="authOverlay">
+  <div class="auth-card">
+    <h2>WorkPlace Dashboard</h2>
+    <p class="auth-sub">PERFORMANCE TRACKER &nbsp;|&nbsp; <span style="color:#2E4A62;font-weight:700;">Designed by Type01warrior</span></p>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-signin" onclick="authShowTab('signin')">SIGN IN</div>
+      <div class="auth-tab" id="tab-signup" onclick="authShowTab('signup')">SIGN UP</div>
+    </div>
+
+    <!-- SIGN IN -->
+    <div id="form-signin">
+      <div class="auth-field"><label>Username / Email / Mobile</label><input type="text" id="si-identifier" placeholder="Enter username, email or mobile"></div>
+      <div class="auth-field"><label>Password</label><input type="password" id="si-password" placeholder="Enter password"></div>
+      <div class="auth-error" id="si-error"></div>
+      <button class="auth-btn" onclick="authSignIn()">SIGN IN</button>
+      <button class="auth-btn secondary" onclick="authShowTab('forgot')">Forgot Password?</button>
+    </div>
+
+    <!-- SIGN UP -->
+    <div id="form-signup" style="display:none;">
+      <div class="auth-field"><label>Name</label><input type="text" id="su-name" placeholder="Full name"></div>
+      <div class="auth-field"><label>Email</label><input type="email" id="su-email" placeholder="your@email.com"></div>
+      <div class="auth-field"><label>Mobile</label><input type="tel" id="su-mobile" placeholder="+91 9999999999"></div>
+      <div class="auth-field"><label>Username</label><input type="text" id="su-username" placeholder="Choose a username"></div>
+      <div class="auth-field"><label>Password</label><input type="password" id="su-password" placeholder="Min 6 characters"></div>
+      <div class="auth-field"><label>Confirm Password</label><input type="password" id="su-confirm" placeholder="Repeat password"></div>
+      <div class="auth-error" id="su-error"></div>
+      <button class="auth-btn" onclick="authSignUp()">CREATE ACCOUNT</button>
+    </div>
+
+    <!-- FORGOT PASSWORD -->
+    <div id="form-forgot" style="display:none;">
+      <p style="font-size:9px;color:#555;margin-bottom:12px;">Enter your registered email address and we'll send a password reset link.</p>
+      <div class="auth-field"><label>Email Address</label><input type="email" id="fp-email" placeholder="your@email.com"></div>
+      <div class="auth-error" id="fp-error"></div>
+      <div class="auth-success" id="fp-success"></div>
+      <button class="auth-btn" onclick="authForgot()">SEND RESET LINK</button>
+      <button class="auth-btn secondary" onclick="authShowTab('signin')">← Back to Sign In</button>
+    </div>
+
+    <div class="auth-switch" id="auth-switch-text">
+      Don't have an account? <a onclick="authShowTab('signup')">Sign Up</a>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN APP (hidden until logged in) ===== -->
+<div id="mainApp" style="display:none;">
+<div class="page">
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <span class="top-name">Mohammed Akram Khan</span>
+  <span class="top-divider">|</span>
+  <span class="top-info">Working Days: <strong id="workingDays">5</strong></span>
+  <span class="top-divider">|</span>
+  <div class="dm-toggle" onclick="toggleDarkMode()" title="Toggle Dark/Light Mode">
+    <span class="pill-option active" id="pill-light">☀️ Light</span>
+    <span class="pill-option" id="pill-dark">🌙 Dark</span>
+  </div>
+  <span class="top-divider">|</span>
+  <button onclick="openSettings()" style="padding:3px 10px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; letter-spacing:0.5px;" title="Settings">⚙ SETTINGS</button>
+  <span class="top-divider">|</span>
+  <button onclick="authSignOut()" style="padding:3px 10px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; letter-spacing:0.5px;" title="Sign Out">⏻ LOGOUT</button>
+  <span class="top-divider">|</span>
+  <button onclick="syncData()" id="syncBtn" style="padding:3px 10px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; letter-spacing:0.5px;" title="Sync to Cloud">☁ SYNC</button>
+  <span class="top-divider">|</span>
+  <button onclick="resetAllFields()" style="padding:3px 10px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:#fff; color:#1C2B3A; border:none; border-radius:10px; cursor:pointer; letter-spacing:0.5px;">↺ RESET</button>
+  <span class="top-time" id="timeNow" style="margin-left:auto; font-size:13px; font-weight:700; letter-spacing:1px;"></span>
+  <span style="color:#fff; opacity:0.5; font-size:13px; padding:0 6px;">|</span>
+  <span style="font-size:13px; font-weight:700; letter-spacing:0.5px; color:#E8F0F8;" id="weekLabelBar">–</span>
+</div>
+
+<!-- WEEKOFF SELECTOR -->
+<div class="weekoff-bar">
+  <span class="weekoff-label">Week Off Days:</span>
+  <div id="weekoffSelector" class="weekoff-pills">
+    <span class="wo-pill" data-day="sun" onclick="toggleWeekOff(this)">Sun</span>
+    <span class="wo-pill" data-day="mon" onclick="toggleWeekOff(this)">Mon</span>
+    <span class="wo-pill" data-day="tue" onclick="toggleWeekOff(this)">Tue</span>
+    <span class="wo-pill" data-day="wed" onclick="toggleWeekOff(this)">Wed</span>
+    <span class="wo-pill" data-day="thu" onclick="toggleWeekOff(this)">Thu</span>
+    <span class="wo-pill" data-day="fri" onclick="toggleWeekOff(this)">Fri</span>
+    <span class="wo-pill active" data-day="sat" onclick="toggleWeekOff(this)">Sat</span>
+  </div>
+  <span style="font-size:9px;opacity:0.6;">(select 2 week-off days; week: Sat–Fri)</span>
+  <div style="margin-left:auto; display:flex; gap:6px; align-items:center;">
+    <button onclick="showDbTab()" id="dbTabBtn" style="padding:3px 12px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:transparent; color:#1C2B3A; border:1px solid #1C2B3A; border-radius:10px; cursor:pointer; letter-spacing:0.5px;">DATABASE</button>
+    <button onclick="pushToDatabase()" style="padding:3px 12px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:#1C2B3A; color:#E8F0F8; border:none; border-radius:10px; cursor:pointer; letter-spacing:0.5px; box-shadow:2px 2px 0 #0d1826;">⬆ PUSH TO DATABASE</button>
+  </div>
+</div>
+
+
+<!-- ======== DATABASE TAB PANEL ======== -->
+<div id="dbTabPanel">
+  <div class="db-card">
+    <div class="db-card-header">
+      <h4>📊 DATABASE — PUSHED SNAPSHOTS</h4>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span class="db-push-msg" id="dbPushMsg"></span>
+        <button onclick="clearAllDb()" style="padding:2px 8px; font-family:'Lexend',sans-serif; font-size:8px; font-weight:700; background:transparent; color:#c0392b; border:1px solid #c0392b; border-radius:6px; cursor:pointer;">CLEAR ALL</button>
+        <button onclick="showDbTab()" style="padding:2px 8px; font-family:'Lexend',sans-serif; font-size:8px; font-weight:700; background:transparent; color:#1C2B3A; border:1px solid #1C2B3A; border-radius:6px; cursor:pointer;">✕ CLOSE</button>
+      </div>
+    </div>
+    <div id="dbEntriesList"><div class="db-empty">No snapshots yet. Click "Push to Database" to capture the main table.</div></div>
+  </div>
+</div>
+
+<!-- ======== TARGET ROW (Row 2 – blue) ======== -->
+<div class="scroll-wrap"><div class="tcard">
+<table style="margin-bottom:4px;">
+  <colgroup>
+    <col style="width:110px">
+    <col style="width:20px">
+    <col style="width:90px"><col style="width:80px"><col style="width:80px"><col style="width:80px">
+    <col style="width:80px"><col style="width:90px">
+    <col style="width:70px"><col style="width:80px"><col style="width:70px"><col style="width:90px">
+  </colgroup>
+  <thead>
+    <tr>
+      <td class="bg-red left" style="font-size:10px;">DAY/AUXCODE</td>
+      <td class="bg-red"></td>
+      <td class="bg-red">PRODUCTION</td>
+      <td class="bg-red">COACHING</td>
+      <td class="bg-red">MEETING</td>
+      <td class="bg-red">WELLBEING</td>
+      <td class="bg-red">BREAK/LUNCH</td>
+      <td class="bg-red">UNAVAILABLE</td>
+      <td class="bg-red">TOTAL AUX</td>
+      <td class="bg-red">UTILIZATION</td>
+      <td class="bg-red">JOB COUNT</td>
+      <td class="bg-red">BILLING HOURS</td>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- TARGET ROW -->
+    <tr class="bg-blue" id="targetRow">
+      <td class="left" id="viewLabel">DAY/BILLING</td>
+      <td id="tot_days" style="text-align:center;">5</td>
+      <td id="t_prod">–</td>
+      <td id="t_coach">–</td>
+      <td id="t_meet">–</td>
+      <td id="t_well">–</td>
+      <td id="t_break">–</td>
+      <td id="t_unavail">–</td>
+      <td id="t_aux">–</td>
+      <td id="t_util">–</td>
+      <td id="target_jobs" style="text-align:center; font-weight:700;">1750</td>
+      <td id="t_billing">–</td>
+    </tr>
+
+    <!-- DAILY ROWS -->
+    <tr class="bg-gray" id="row_sun">
+      <td class="left">SUNDAY</td>
+      <td class="input-cell"><input type="checkbox" id="chk_sun" checked onchange="recalc()"></td>
+      <td class="input-cell"><input type="text" class="dur" id="prod_sun" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="coach_sun" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="meet_sun" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="well_sun" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="break_sun" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="unavail_sun" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td id="aux_sun">00:33</td>
+      <td id="util_sun">94.51%</td>
+      <td class="input-cell"><input type="number" id="jobs_sun" value="0" min="0" style="width:60px;" onchange="recalc()"></td>
+      <td id="bill_sun">10:01</td>
+    </tr>
+    <tr class="bg-gray" id="row_mon">
+      <td class="left">MONDAY</td>
+      <td class="input-cell"><input type="checkbox" id="chk_mon" checked onchange="recalc()"></td>
+      <td class="input-cell"><input type="text" class="dur" id="prod_mon" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="coach_mon" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="meet_mon" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="well_mon" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="break_mon" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="unavail_mon" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td id="aux_mon">00:00</td>
+      <td id="util_mon">–</td>
+      <td class="input-cell"><input type="number" id="jobs_mon" value="0" min="0" style="width:60px;" onchange="recalc()"></td>
+      <td id="bill_mon">00:00</td>
+    </tr>
+    <tr class="bg-gray" id="row_tue">
+      <td class="left">TUESDAY</td>
+      <td class="input-cell"><input type="checkbox" id="chk_tue" checked onchange="recalc()"></td>
+      <td class="input-cell"><input type="text" class="dur" id="prod_tue" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="coach_tue" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="meet_tue" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="well_tue" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="break_tue" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="unavail_tue" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td id="aux_tue">00:00</td>
+      <td id="util_tue">–</td>
+      <td class="input-cell"><input type="number" id="jobs_tue" value="0" min="0" style="width:60px;" onchange="recalc()"></td>
+      <td id="bill_tue">00:00</td>
+    </tr>
+    <tr class="bg-gray" id="row_wed">
+      <td class="left">WEDNESDAY</td>
+      <td class="input-cell"><input type="checkbox" id="chk_wed" checked onchange="recalc()"></td>
+      <td class="input-cell"><input type="text" class="dur" id="prod_wed" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="coach_wed" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="meet_wed" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="well_wed" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="break_wed" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="unavail_wed" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td id="aux_wed">00:00</td>
+      <td id="util_wed">–</td>
+      <td class="input-cell"><input type="number" id="jobs_wed" value="0" min="0" style="width:60px;" onchange="recalc()"></td>
+      <td id="bill_wed">00:00</td>
+    </tr>
+    <tr class="bg-gray" id="row_thu">
+      <td class="left">THURSDAY</td>
+      <td class="input-cell"><input type="checkbox" id="chk_thu" checked onchange="recalc()"></td>
+      <td class="input-cell"><input type="text" class="dur" id="prod_thu" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="coach_thu" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="meet_thu" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="well_thu" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="break_thu" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td class="input-cell"><input type="text" class="dur" id="unavail_thu" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
+      <td id="aux_thu">00:00</td>
+      <td id="util_thu">–</td>
+      <td class="input-cell"><input type="number" id="jobs_thu" value="0" min="0" style="width:60px;" onchange="recalc()"></td>
+      <td id="bill_thu">00:00</td>
+    </tr>
+
+    <!-- TOTAL USED -->
+    <tr class="total-used">
+      <td class="left">TOTAL USED</td>
+      <td></td>
+      <td id="tot_prod">–</td>
+      <td id="tot_coach">–</td>
+      <td id="tot_meet">–</td>
+      <td id="tot_well">–</td>
+      <td id="tot_break">–</td>
+      <td id="tot_unavail">–</td>
+      <td id="tot_aux">–</td>
+      <td id="tot_util">–</td>
+      <td id="tot_jobs">–</td>
+      <td id="tot_billing">–</td>
+    </tr>
+
+    <!-- TOTAL BALANCE -->
+    <tr class="total-balance">
+      <td class="left">TOTAL BALANCE</td>
+      <td></td>
+      <td id="bal_prod">–</td>
+      <td id="bal_coach">–</td>
+      <td id="bal_meet">–</td>
+      <td id="bal_well">–</td>
+      <td id="bal_break">–</td>
+      <td id="bal_unavail">–</td>
+      <td id="bal_aux">–</td>
+      <td id="bal_util">–</td>
+      <td id="bal_jobs">–</td>
+      <td id="bal_billing">–</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ======== BOTTOM PANELS ======== -->
+<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; align-items:flex-start;">
+
+  <!-- DAILY / WEEKLY card — sits directly above ACHIEVED/BALANCE, same left column -->
+  <!-- We use a nested layout: left col = daily/weekly stacked above achieved/balance -->
+  <!-- Actually use a single left column div with two tables stacked -->
+
+  <!-- LEFT COLUMN: DAILY/WEEKLY on top, ACHIEVED/BALANCE below -->
+  <div style="display:flex; flex-direction:column; gap:2px;">
+
+    <!-- DAILY / WEEKLY TABLE -->
+    <div class="tcard tcard-compact"><table>
+      <tr>
+        <td class="bg-red left" style="width:110px;">DAY/AUXCODE</td>
+        <td class="bg-red" id="dw_daily_header" style="text-align:center; font-weight:700; min-width:80px;">DAILY</td>
+        <td class="bg-red" id="dw_weekly_header" style="text-align:center; font-weight:700; min-width:80px;">WEEKLY</td>
+      </tr>
+      <tr>
+        <td class="bg-red left">WEEK</td>
+        <td class="bg-red" id="dw_week_daily" style="text-align:center;">–</td>
+        <td class="bg-red" id="dw_week_weekly" style="text-align:center;">–</td>
+      </tr>
+      <tr><td class="left">PRODUCTION</td>   <td id="dw_d_prod">–</td>   <td id="dw_w_prod">–</td></tr>
+      <tr><td class="left">COACHING</td>     <td id="dw_d_coach">–</td>  <td id="dw_w_coach">–</td></tr>
+      <tr><td class="left">MEETING</td>      <td id="dw_d_meet">–</td>   <td id="dw_w_meet">–</td></tr>
+      <tr><td class="left">WELLBEING</td>    <td id="dw_d_well">–</td>   <td id="dw_w_well">–</td></tr>
+      <tr><td class="left">TOTAL BILLING</td><td id="dw_d_billing">–</td><td id="dw_w_billing">–</td></tr>
+      <tr><td class="left">TOTAL AUX</td>    <td id="dw_d_aux">–</td>    <td id="dw_w_aux">–</td></tr>
+      <tr><td class="left">UTILIZATION</td>  <td id="dw_d_util">–</td>   <td id="dw_w_util">–</td></tr>
+    </table></div>
+
+    <!-- COPY BUTTON - Daily/Weekly -->
+    <div style="margin-top:1px; display:flex; gap:6px;">
+      <button onclick="copyDW('daily')" style="flex:1; padding:4px 8px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:#1C2B3A; color:#E8F0F8; border:none; border-radius:6px; cursor:pointer; box-shadow:2px 2px 0 #0d1826; letter-spacing:0.5px;">COPY DAILY</button>
+      <button onclick="copyDW('weekly')" style="flex:1; padding:4px 8px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:#2E4A62; color:#E8F0F8; border:none; border-radius:6px; cursor:pointer; box-shadow:2px 2px 0 #1a2f42; letter-spacing:0.5px;">COPY WEEKLY</button>
+    </div>
+    <div id="dwToast" style="display:none; margin-top:1px; padding:4px 8px; background:#1C2B3A; color:#E8F0F8; border-radius:6px; font-size:9px; font-weight:700; text-align:center;">Copied!</div>
+
+    <div style="height:8px;"></div>
+
+    <!-- PANEL 2: BILLING ACHIEVED + BALANCE (merged) -->
+    <div class="tcard tcard-compact"><table>
+      <tr>
+        <td class="bg-red left" style="width:110px;">DAY/AUXCODE</td>
+        <td class="bg-red" style="text-align:center;min-width:80px;">ACHIEVED</td>
+        <td class="bg-red" style="text-align:center;min-width:80px;">BALANCE</td>
+      </tr>
+      <tr>
+        <td class="bg-red left">WEEK</td>
+        <td class="bg-red" id="p2_week" style="text-align:center;">–</td>
+        <td class="bg-red" id="p2_bweek" style="text-align:center;">–</td>
+      </tr>
+      <tr><td class="left">PRODUCTION</td>   <td id="p2_prod">–</td>    <td id="p2_bprod">–</td></tr>
+      <tr><td class="left">COACHING</td>     <td id="p2_coach">–</td>   <td id="p2_bcoach">–</td></tr>
+      <tr><td class="left">MEETING</td>      <td id="p2_meet">–</td>    <td id="p2_bmeet">–</td></tr>
+      <tr><td class="left">WELLBEING</td>    <td id="p2_well">–</td>    <td id="p2_bwell">–</td></tr>
+      <tr><td class="left">TOTAL BILLING</td><td id="p2_billing">–</td> <td id="p2_bbilling">–</td></tr>
+      <tr><td class="left">UTILIZATION</td>  <td id="p2_util">–</td>    <td id="p2_butil">–</td></tr>
+      <tr><td class="left">TOTAL COUNT</td>  <td id="p2_count">0</td>   <td id="p2_count_bal">–</td></tr>
+    </table></div>
+
+    <!-- COPY BUTTON -->
+    <div style="margin-top:1px; display:flex; gap:6px;">
+      <button onclick="copyData('achieved')" style="flex:1; padding:4px 8px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:#1C2B3A; color:#E8F0F8; border:none; border-radius:6px; cursor:pointer; box-shadow:2px 2px 0 #0d1826; letter-spacing:0.5px;">COPY ACHIEVED</button>
+      <button onclick="copyData('balance')" style="flex:1; padding:4px 8px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:#2E4A62; color:#E8F0F8; border:none; border-radius:6px; cursor:pointer; box-shadow:2px 2px 0 #1a2f42; letter-spacing:0.5px;">COPY BALANCE</button>
+    </div>
+
+    <!-- COPY TOAST -->
+    <div id="copyToast" style="display:none; margin-top:1px; padding:4px 8px; background:#1C2B3A; color:#E8F0F8; border-radius:6px; font-size:9px; font-weight:700; text-align:center;">Copied!</div>
+
+  </div><!-- end left flex column -->
+
+  <!-- PANEL 4: WEEKLY TEAM AUX + AHT -->
+  <div style="display:flex; flex-direction:column; gap:6px; min-width:200px;">
+    <div class="tcard tcard-compact"><table>
+      <tr>
+        <td class="bg-red left" style="width:110px;">DAY/AUXCODE</td>
+        <td class="bg-red" colspan="1" style="text-align:center;min-width:80px;">REMAINING BALANCES</td>
+      </tr>
+      <tr>
+        <td class="bg-red left">DAYS LEFT</td>
+        <td class="bg-red input-cell" style="padding:0;">
+          <input type="number" id="daysLeft" value="1" min="0" max="5" style="width:100%;background:transparent;text-align:center;color:#000;" onchange="recalc()">
+        </td>
+      </tr>
+      <tr><td class="left">PRODUCTION</td><td id="p2_rprod">–</td></tr>
+      <tr><td class="left">AUX</td>       <td id="p2_raux">–</td></tr>
+      <tr><td class="left">TOTAL</td>     <td id="p2_rtotal">–</td></tr>
+    </table></div>
+    <div class="tcard tcard-compact" style="width:100%;"><table style="width:100%;">
+      <tr>
+        <td class="bg-red left" style="width:110px;">DAY/AUXCODE</td>
+        <td class="bg-red" style="text-align:center;min-width:60px;">MINS</td>
+      </tr>
+      <tr>
+        <td class="left" style="width:100px;">PRODUCTION</td>
+        <td class="input-cell bg-gray" style="width:60px;padding:0;">
+          <input type="number" id="q_prod" value="2375" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()">
+        </td>
+
+      </tr>
+      <tr>
+        <td class="left">COACHING</td>
+        <td class="input-cell bg-gray" style="padding:0;">
+          <input type="number" id="q_coach" value="65" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()">
+        </td>
+
+      </tr>
+      <tr>
+        <td class="left">MEETING</td>
+        <td class="input-cell bg-gray" style="padding:0;">
+          <input type="number" id="q_meet" value="55" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()">
+        </td>
+
+      </tr>
+      <tr>
+        <td class="left">WELLBEING</td>
+        <td class="input-cell bg-gray" style="padding:0;">
+          <input type="number" id="q_well" value="60" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()">
+        </td>
+      </tr>
+      <tr>
+        <td class="left">JOB COUNT</td>
+        <td class="input-cell bg-gray" style="padding:0;">
+          <input type="number" id="q_jobs" value="1750" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()">
+        </td>
+      </tr>
+      <tr>
+        <td class="left">TOTALS</td>
+        <td id="q_total">–</td>
+      </tr>
+    </table></div>
+
+</div>
+
+</div><!-- end panels -->
+
+</div><!-- end page -->
+
+<script>
+// ===== DURATION INPUT HELPER =====
+// Validates and auto-formats HH:MM as user types
+function fmtDurInput(el) {
+  let v = el.value.replace(/[^0-9:]/g, '');
+  // Auto-insert colon after 2 digits if not present
+  if (v.length === 2 && !v.includes(':')) v = v + ':';
+  if (v.length > 5) v = v.slice(0, 5);
+  el.value = v;
+  // Validate format
+  const valid = /^\d{1,3}:\d{2}$/.test(v);
+  el.classList.toggle('invalid', !valid);
+}
+
+// ===== HELPERS =====
+function parseTime(str) {
+  // returns total minutes — handles HH:MM, H:MM, HHH:MM (duration format)
+  if (!str || str === '–' || str === '') return 0;
+  str = str.trim();
+  const parts = str.split(':');
+  if (parts.length < 2) return 0;
+  const h = parseInt(parts[0]) || 0;
+  const m = parseInt(parts[1]) || 0;
+  if (m > 59) return 0; // invalid
+  return h * 60 + m;
+}
+
+function fmtTime(mins) {
+  if (mins === null || isNaN(mins)) return '–';
+  const sign = mins < 0 ? '-' : '';
+  const abs = Math.abs(mins);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  return sign + h + ':' + String(m).padStart(2,'0');
+}
+
+function fmtPct(val) {
+  if (isNaN(val) || !isFinite(val)) return '–';
+  return (val * 100).toFixed(2) + '%';
+}
+
+function getInputMins(id) {
+  return parseTime(document.getElementById(id)?.value || '00:00');
+}
+
+// get next Friday label
+function getWeekLabel() {
+  const today = new Date();
+  const day = today.getDay(); // 0=Sun
+  const daysUntilFri = (5 - day + 7) % 7 || 7;
+  const fri = new Date(today);
+  fri.setDate(today.getDate() + daysUntilFri);
+  const d = fri.getDate();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let suffix;
+  if (d >= 11 && d <= 13) suffix = 'th';
+  else {
+    switch (d % 10) {
+      case 1: suffix = 'st'; break;
+      case 2: suffix = 'nd'; break;
+      case 3: suffix = 'rd'; break;
+      default: suffix = 'th';
+    }
+  }
+  const yr = String(fri.getFullYear()).slice(2);
+  return `WE-${d}${suffix} ${months[fri.getMonth()]}'${yr}`;
+}
+
+// Today's day name
+function getTodayDayName() {
+  const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+  return days[new Date().getDay()];
+}
+
+// Working day number (1=Sun...5=Thu in this system; based on day name)
+function getWorkingDayNum() {
+  const map = {SUNDAY:1,MONDAY:2,TUESDAY:3,WEDNESDAY:4,THURSDAY:5};
+  return map[getTodayDayName()] || 1;
+}
+
+// Days in order
+const DAYS = ['sun','mon','tue','wed','thu'];
+const DAY_NAMES = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY'];
+
+// Current view mode
+let isBilling = false;
+
+function toggleView() {
+  isBilling = !isBilling;
+  const btn = document.getElementById('toggleBtn');
+  const lbl = document.getElementById('toggleLabel');
+  const vlbl = document.getElementById('viewLabel');
+  if (isBilling) {
+    btn.classList.add('billing');
+    lbl.textContent = 'BILLING';
+    if (p3lbl) p3lbl.textContent = 'BILLING';
+    if (vlbl) vlbl.textContent = 'BILLING';
+  } else {
+    btn.classList.remove('billing');
+    lbl.textContent = 'DAY/BILLING';
+    if (p3lbl) p3lbl.textContent = 'DAY/BILLING';
+    if (vlbl) vlbl.textContent = 'DAY/BILLING';
+  }
+  recalc();
+}
+
+function setText(id, val, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val;
+  if (cls) { el.className = cls; }
+}
+
+function setHtml(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = val;
+}
+
+function colorBal(mins) {
+  // All black text as requested
+  return fmtTime(mins);
+}
+
+// ===== MAIN RECALC =====
+function recalc() {
+  const weekLabel = getWeekLabel();
+  const todayName = getTodayDayName();
+  const wdayNum = getWorkingDayNum();
+
+  const wlb = document.getElementById('weekLabelBar');
+  if (wlb) wlb.textContent = weekLabel;
+
+  // Update date/time
+  const now = new Date();
+  document.getElementById('timeNow').textContent = now.toLocaleTimeString();
+
+  // Week labels
+  ['p2_week','p2_bweek'].forEach(id => setText(id, weekLabel));
+
+  // Working days (count checked boxes)
+  const activeDays = DAYS.filter(d => document.getElementById('chk_' + d)?.checked);
+  const numDays = activeDays.length;
+  document.getElementById('workingDays').textContent = numDays;
+  document.getElementById('tot_days').textContent = numDays;
+  // Auto-update job count target: 350/day
+  const qJobsEl = document.getElementById('q_jobs');
+  if (qJobsEl) qJobsEl.value = 350 * numDays;
+
+  // Per-day calculations
+  let totProd = 0, totCoach = 0, totMeet = 0, totWell = 0, totBreak = 0, totUnavail = 0, totJobs = 0;
+
+  DAYS.forEach(d => {
+    const prod = getInputMins('prod_' + d);
+    const coach = getInputMins('coach_' + d);
+    const meet = getInputMins('meet_' + d);
+    const well = getInputMins('well_' + d);
+    const brk = getInputMins('break_' + d);
+    const un = getInputMins('unavail_' + d);
+    const jobs = parseInt(document.getElementById('jobs_' + d)?.value || 0);
+    const aux = coach + meet + well + brk + un;
+    const billing = prod + aux;
+    const util = billing > 0 ? prod / billing : null;
+
+    setText('aux_' + d, fmtTime(aux));
+    setText('util_' + d, util !== null ? fmtPct(util) : '–');
+    setText('bill_' + d, fmtTime(billing));
+
+    if (document.getElementById('chk_' + d)?.checked) {
+      totProd += prod;
+      totCoach += coach;
+      totMeet += meet;
+      totWell += well;
+      totBreak += brk;
+      totUnavail += un;
+      totJobs += jobs;
+    }
+  });
+
+  const totAux = totCoach + totMeet + totWell + totBreak + totUnavail;
+  const totBilling = totProd + totAux;
+  const totUtil = totBilling > 0 ? totProd / totBilling : null;
+
+  setText('tot_prod', fmtTime(totProd));
+  setText('tot_coach', fmtTime(totCoach));
+  setText('tot_meet', fmtTime(totMeet));
+  setText('tot_well', fmtTime(totWell));
+  setText('tot_break', fmtTime(totBreak));
+  setText('tot_unavail', fmtTime(totUnavail));
+  setText('tot_aux', fmtTime(totAux));
+  setText('tot_util', totUtil !== null ? fmtPct(totUtil) : '–');
+  setText('tot_jobs', totJobs);
+  setText('tot_billing', fmtTime(totBilling));
+
+
+  // === WEEKLY TEAM AUX CODES (Q28:Q31) => R col ===
+  const qProd = parseFloat(document.getElementById('q_prod').value) || 0;
+  const qCoach = parseFloat(document.getElementById('q_coach').value) || 0;
+  const qMeet = parseFloat(document.getElementById('q_meet').value) || 0;
+  const qWell = parseFloat(document.getElementById('q_well').value) || 0;
+  const qTotal = qProd + qCoach + qMeet + qWell;
+
+  setText('r_prod', fmtTime(Math.round(qProd)));
+  setText('r_coach', fmtTime(Math.round(qCoach)));
+  setText('r_meet', fmtTime(Math.round(qMeet)));
+  setText('r_well', fmtTime(Math.round(qWell)));
+  setText('q_total', Math.round(qTotal));
+  setText('r_total', fmtTime(Math.round(qTotal)));
+
+  // === TARGETS ===
+  // Daily targets from Q values / 5 working days, scaled by actual days
+  const tProd = Math.round(qProd / 5);
+  const tCoach = Math.round(qCoach / 5);
+  const tMeet = Math.round(qMeet / 5);
+  const tWell = Math.round(qWell / 5);
+  const tTotAux = tCoach + tMeet + tWell;
+  const tBilling = tProd + tTotAux;
+  const tUtil = tBilling > 0 ? tProd / tBilling : null;
+
+  // Weekly targets = daily * active days
+  const wTotProd = tProd * numDays;
+  const wTotCoach = tCoach * numDays;
+  const wTotMeet = tMeet * numDays;
+  const wTotWell = tWell * numDays;
+  const wTotBreak = 0; // no target
+  const wTotAux = wTotCoach + wTotMeet + wTotWell;
+  const wTotBilling = wTotProd + wTotAux;
+  const wTotUtil = 0.9295; // Fixed default target utilization: 92.95%
+
+  // Target row (row 2 blue) — shows weekly targets
+  setText('t_prod', fmtTime(wTotProd));
+  setText('t_coach', fmtTime(wTotCoach));
+  setText('t_meet', fmtTime(wTotMeet));
+  setText('t_well', fmtTime(wTotWell));
+  setText('t_break', fmtTime(0));
+  setText('t_unavail', fmtTime(0));
+  setText('t_aux', fmtTime(wTotAux));
+  setText('t_util', wTotUtil !== null ? fmtPct(wTotUtil) : '–');
+  // target_jobs is now an input in the blue target row (row 2)
+  setText('t_billing', fmtTime(wTotBilling));
+
+  // Balances
+  setHtml('bal_prod', colorBal(wTotProd - totProd));
+  setHtml('bal_coach', colorBal(wTotCoach - totCoach));
+  setHtml('bal_meet', colorBal(wTotMeet - totMeet));
+  setHtml('bal_well', colorBal(wTotWell - totWell));
+  setHtml('bal_break', colorBal(0 - totBreak));
+  setHtml('bal_unavail', colorBal(0 - totUnavail));
+  setHtml('bal_aux', colorBal(wTotAux - totAux));
+  const balUtil = totUtil !== null ? (totUtil - wTotUtil) : null;
+  if (balUtil !== null) setText('bal_util', (balUtil * 100).toFixed(2) + '%');
+  else setText('bal_util', '–');
+
+  const targetJobs = parseInt(document.getElementById('q_jobs')?.value || 1750);
+  setText('target_jobs', targetJobs);
+  // tot_jobs = sum of checked daily jobs; bal_jobs = target - sum
+  setText('tot_jobs', totJobs);
+  setText('bal_jobs', targetJobs - totJobs);
+  setHtml('bal_billing', colorBal(wTotBilling - totBilling));
+
+  // === DAILY / WEEKLY SUMMARY CARDS ===
+  setText('dw_daily_header',  'DAILY');
+  setText('dw_weekly_header', 'WEEKLY');
+  setText('dw_week_daily',  weekLabel);
+  setText('dw_week_weekly', weekLabel);
+  // Daily = per-day target
+  setText('dw_d_prod',    fmtTime(tProd));
+  setText('dw_d_coach',   fmtTime(tCoach));
+  setText('dw_d_meet',    fmtTime(tMeet));
+  setText('dw_d_well',    fmtTime(tWell));
+  setText('dw_d_billing', fmtTime(tBilling));
+  setText('dw_d_aux',     fmtTime(tTotAux));
+  setText('dw_d_util',    tUtil !== null ? fmtPct(tUtil) : '–');
+  // Weekly = actual totals achieved
+  setText('dw_w_prod',    fmtTime(wTotProd));
+  setText('dw_w_coach',   fmtTime(wTotCoach));
+  setText('dw_w_meet',    fmtTime(wTotMeet));
+  setText('dw_w_well',    fmtTime(wTotWell));
+  setText('dw_w_billing', fmtTime(wTotBilling));
+  setText('dw_w_aux',     fmtTime(wTotAux));
+  setText('dw_w_util',    wTotUtil !== null ? fmtPct(wTotUtil) : '–');
+
+    // === TODAY's snapshot ===
+  const todayIdx = DAY_NAMES.indexOf(todayName);
+  const todayKey = todayIdx >= 0 ? DAYS[todayIdx] : 'sun';
+  const tProdToday = getInputMins('prod_' + todayKey);
+  const tCoachToday = getInputMins('coach_' + todayKey);
+  const tMeetToday = getInputMins('meet_' + todayKey);
+  const tWellToday = getInputMins('well_' + todayKey);
+  const tBrkToday = getInputMins('break_' + todayKey);
+  const tUnToday = getInputMins('unavail_' + todayKey);
+  const tAuxToday = tCoachToday + tMeetToday + tWellToday + tBrkToday + tUnToday;
+  const tBillToday = tProdToday + tAuxToday;
+  const tUtilToday = tBillToday > 0 ? tProdToday / tBillToday : null;
+  const tJobsToday = parseInt(document.getElementById('jobs_' + todayKey)?.value || 0);
+
+
+  // === PANEL 2 weekly achieved ===
+  setText('p2_prod', fmtTime(totProd));
+  setText('p2_coach', fmtTime(totCoach));
+  setText('p2_meet', fmtTime(totMeet));
+  setText('p2_well', fmtTime(totWell));
+  setText('p2_billing', fmtTime(totBilling));
+  setText('p2_util', totUtil !== null ? fmtPct(totUtil) : '–');
+  setText('p2_count', totJobs);
+  setText('p2_count_bal', targetJobs - totJobs);
+
+  // weekly billing balance
+  setHtml('p2_bprod', colorBal(wTotProd - totProd));
+  setHtml('p2_bcoach', colorBal(wTotCoach - totCoach));
+  setHtml('p2_bmeet', colorBal(wTotMeet - totMeet));
+  setHtml('p2_bwell', colorBal(wTotWell - totWell));
+  setHtml('p2_bbilling', colorBal(wTotBilling - totBilling));
+  const wBalUtil = totUtil !== null ? (wTotUtil - totUtil) : null;
+  if (wBalUtil !== null) setText('p2_butil', (wBalUtil * 100).toFixed(2) + '%');
+  else setText('p2_butil', '–');
+
+  // remaining balances — T22 (daysLeft) drives T23:T25
+  // Show ONLY the per-day required amount (balance / daysLeft)
+  const daysLeft = parseInt(document.getElementById('daysLeft').value) || 0;
+  const remProd = wTotProd - totProd;
+  const remAux = wTotAux - totAux;
+  const remTotal = wTotBilling - totBilling;
+
+  const t23 = daysLeft > 0 ? Math.round(remProd / daysLeft) : remProd;
+  const t24 = daysLeft > 0 ? Math.round(remAux  / daysLeft) : remAux;
+  const t25 = daysLeft > 0 ? Math.round(remTotal / daysLeft) : remTotal;
+
+  setHtml('p2_rprod',  colorBal(t23) + `<span style="font-size:9px;opacity:0.8;">/day</span>`);
+  setHtml('p2_raux',   colorBal(t24) + `<span style="font-size:9px;opacity:0.8;">/day</span>`);
+  setHtml('p2_rtotal', colorBal(t25) + `<span style="font-size:9px;opacity:0.8;">/day</span>`);
+
+  // === PANEL 3: targets table ===
+
+  // PRO in pts = prod mins / 60
+  const proPts = tProdToday / 60;
+  const actProPts = totProd / 60;
+
+  // BILLING col targets (from Q/5)
+  const bUtil = (Math.round(qTotal/5)) > 0 ? Math.round(qProd/5) / Math.round(qTotal/5) : null;
+}
+
+// ===== RESET ALL FIELDS =====
+function resetAllFields() {
+  const days = ['sun','mon','tue','wed','thu'];
+  const durFields = ['prod','coach','meet','well','break','unavail'];
+  days.forEach(d => {
+    durFields.forEach(f => {
+      const el = document.getElementById(`${f}_${d}`);
+      if (el) el.value = '00:00';
+    });
+    const jobs = document.getElementById(`jobs_${d}`);
+    if (jobs) jobs.value = 0;
+  });
+  recalc();
+}
+
+// ===== COPY DAILY/WEEKLY =====
+function copyDW(type) {
+  const week = document.getElementById('dw_week_daily')?.textContent || '–';
+  const pad = (s, n=14) => s.padEnd(n);
+  let text = '';
+  if (type === 'daily') {
+    text = [
+      'DAILY BILLING DATA',
+      `${pad('WEEK')} : ${week}`,
+      `${pad('PRODUCTION')} : ${document.getElementById('dw_d_prod')?.textContent || '–'}`,
+      `${pad('COACHING')} : ${document.getElementById('dw_d_coach')?.textContent || '–'}`,
+      `${pad('MEETING')} : ${document.getElementById('dw_d_meet')?.textContent || '–'}`,
+      `${pad('WELLBEING')} : ${document.getElementById('dw_d_well')?.textContent || '–'}`,
+      `${pad('TOTAL BILLING')} : ${document.getElementById('dw_d_billing')?.textContent || '–'}`,
+      `${pad('TOTAL AUX')} : ${document.getElementById('dw_d_aux')?.textContent || '–'}`,
+      `${pad('UTILIZATION')} : ${document.getElementById('dw_d_util')?.textContent || '–'}`,
+    ].join('\n');
+  } else {
+    text = [
+      'WEEKLY BILLING DATA',
+      `${pad('WEEK')} : ${week}`,
+      `${pad('PRODUCTION')} : ${document.getElementById('dw_w_prod')?.textContent || '–'}`,
+      `${pad('COACHING')} : ${document.getElementById('dw_w_coach')?.textContent || '–'}`,
+      `${pad('MEETING')} : ${document.getElementById('dw_w_meet')?.textContent || '–'}`,
+      `${pad('WELLBEING')} : ${document.getElementById('dw_w_well')?.textContent || '–'}`,
+      `${pad('TOTAL BILLING')} : ${document.getElementById('dw_w_billing')?.textContent || '–'}`,
+      `${pad('TOTAL AUX')} : ${document.getElementById('dw_w_aux')?.textContent || '–'}`,
+      `${pad('UTILIZATION')} : ${document.getElementById('dw_w_util')?.textContent || '–'}`,
+    ].join('\n');
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  const toast = document.getElementById('dwToast');
+  toast.textContent = type === 'daily' ? '✓ Daily data copied!' : '✓ Weekly data copied!';
+  toast.style.display = 'block';
+  setTimeout(() => toast.style.display = 'none', 2000);
+}
+
+// ===== COPY DATA =====
+function copyData(type) {
+  const week = document.getElementById('p2_week')?.textContent || '–';
+  const pad = (s, n=14) => s.padEnd(n);
+  let text = '';
+  if (type === 'achieved') {
+    text = [
+      'WEEKLY BILLING ACHIEVED DATA',
+      `${pad('WEEK')} : ${week}`,
+      `${pad('PRODUCTION')} : ${document.getElementById('p2_prod')?.textContent || '–'}`,
+      `${pad('COACHING')} : ${document.getElementById('p2_coach')?.textContent || '–'}`,
+      `${pad('MEETING')} : ${document.getElementById('p2_meet')?.textContent || '–'}`,
+      `${pad('WELLBEING')} : ${document.getElementById('p2_well')?.textContent || '–'}`,
+      `${pad('TOTAL BILLING')} : ${document.getElementById('p2_billing')?.textContent || '–'}`,
+      `${pad('UTILIZATION')} : ${document.getElementById('p2_util')?.textContent || '–'}`,
+      `${pad('TOTAL COUNT')} : ${document.getElementById('p2_count')?.textContent || '–'}`,
+    ].join('\n');
+  } else {
+    text = [
+      'WEEKLY BILLING BALANCE DATA',
+      `${pad('WEEK')} : ${week}`,
+      `${pad('PRODUCTION')} : ${document.getElementById('p2_bprod')?.textContent || '–'}`,
+      `${pad('COACHING')} : ${document.getElementById('p2_bcoach')?.textContent || '–'}`,
+      `${pad('MEETING')} : ${document.getElementById('p2_bmeet')?.textContent || '–'}`,
+      `${pad('WELLBEING')} : ${document.getElementById('p2_bwell')?.textContent || '–'}`,
+      `${pad('TOTAL BILLING')} : ${document.getElementById('p2_bbilling')?.textContent || '–'}`,
+      `${pad('UTILIZATION')} : ${document.getElementById('p2_butil')?.textContent || '–'}`,
+      `${pad('TOTAL COUNT')} : ${document.getElementById('p2_count_bal')?.textContent || '–'}`,
+    ].join('\n');
+  }
+  // Use textarea fallback — works on local file:// without HTTPS
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  const toast = document.getElementById('copyToast');
+  toast.textContent = type === 'achieved' ? '✓ Achieved data copied!' : '✓ Balance data copied!';
+  toast.style.display = 'block';
+  setTimeout(() => toast.style.display = 'none', 2000);
+}
+
+
+// All 7 days of the week starting Saturday (corporate week Sat-Fri)
+const ALL_DAYS_ORDER = ['sat','sun','mon','tue','wed','thu','fri'];
+const ALL_DAY_NAMES  = ['SATURDAY','SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'];
+let weekOffDays = new Set(['sat']); // default: Sat off (Fri-Sat)
+
+function toggleWeekOff(pill) {
+  const day = pill.dataset.day;
+  if (weekOffDays.has(day)) {
+    weekOffDays.delete(day);
+    pill.classList.remove('active');
+  } else {
+    if (weekOffDays.size >= 2) {
+      // remove oldest
+      const first = [...weekOffDays][0];
+      weekOffDays.delete(first);
+      document.querySelector(`.wo-pill[data-day="${first}"]`).classList.remove('active');
+    }
+    weekOffDays.add(day);
+    pill.classList.add('active');
+  }
+  updateWorkingDayRows();
+  recalc();
+}
+
+function updateWorkingDayRows() {
+  // Show/hide rows and update checkboxes based on weekoff selection
+  // Working days = ALL_DAYS_ORDER minus weekOffDays
+  // The main table only has 5 rows: sun,mon,tue,wed,thu
+  // We need to show the correct 5 working days
+  const workDays = ALL_DAYS_ORDER.filter(d => !weekOffDays.has(d)); // 5 working days
+  const rowKeys = ['sun','mon','tue','wed','thu','fri','sat'];
+  const rowDayNames = {
+    sun:'SUNDAY', mon:'MONDAY', tue:'TUESDAY', wed:'WEDNESDAY',
+    thu:'THURSDAY', fri:'FRIDAY', sat:'SATURDAY'
+  };
+
+  // Map the 5 working days to the 5 table rows
+  const tableRows = ['sun','mon','tue','wed','thu']; // HTML row IDs
+  tableRows.forEach((rowId, i) => {
+    const actualDay = workDays[i] || rowId;
+    const rowEl = document.getElementById('row_' + rowId);
+    if (rowEl) {
+      // Update the day label
+      const label = rowEl.querySelector('td.left');
+      if (label) label.textContent = (rowDayNames[actualDay] || actualDay.toUpperCase());
+      rowEl.dataset.actualDay = actualDay;
+    }
+    // Update checkbox
+    const chk = document.getElementById('chk_' + rowId);
+    if (chk) chk.checked = true;
+  });
+}
+
+// ===== IST CLOCK (UTC+5:30) =====
+function getISTTime() {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const ist = new Date(utc + 5.5 * 3600000);
+  const h = String(ist.getHours()).padStart(2,'0');
+  const m = String(ist.getMinutes()).padStart(2,'0');
+  const s = String(ist.getSeconds()).padStart(2,'0');
+  const ampm = ist.getHours() >= 12 ? 'PM' : 'AM';
+  const h12 = ist.getHours() % 12 || 12;
+  return `${String(h12).padStart(2,'0')}:${m}:${s} ${ampm}`;
+}
+
+// ===== DARK MODE =====
+function toggleDarkMode() {
+  const isDark = document.body.classList.toggle('dark');
+  document.getElementById('pill-light').classList.toggle('active', !isDark);
+  document.getElementById('pill-dark').classList.toggle('active', isDark);
+  localStorage.setItem('dmMode', isDark ? 'dark' : 'light');
+}
+
+// ===== CLOCK =====
+function updateClock() {
+  const el = document.getElementById('timeNow');
+  if (el) el.textContent = getISTTime();
+}
+
+// Init
+window.addEventListener('load', () => {
+  // Restore dark mode
+  if (localStorage.getItem('dmMode') === 'dark') {
+    document.body.classList.add('dark');
+    document.getElementById('pill-light').classList.remove('active');
+    document.getElementById('pill-dark').classList.add('active');
+  }
+  updateWorkingDayRows();
+  recalc();
+  updateClock();
+  setInterval(() => { updateClock(); }, 1000);
+  setInterval(() => { recalc(); }, 60000);
+  // auto-save on any input
+  document.querySelectorAll("input").forEach(el => el.addEventListener("change", () => { if(window.saveUserData) window.saveUserData(); }));
+});
+// ===== AUTH FUNCTIONS =====
+function authShowTab(tab) {
+  document.getElementById('form-signin').style.display = tab === 'signin' ? '' : 'none';
+  document.getElementById('form-signup').style.display = tab === 'signup' ? '' : 'none';
+  document.getElementById('form-forgot').style.display = tab === 'forgot' ? '' : 'none';
+  document.getElementById('tab-signin').classList.toggle('active', tab === 'signin');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+  const sw = document.getElementById('auth-switch-text');
+  if (tab === 'signin') sw.innerHTML = 'Don\'t have an account? <a onclick="authShowTab(\'signup\')">Sign Up</a>';
+  else if (tab === 'signup') sw.innerHTML = 'Already have an account? <a onclick="authShowTab(\'signin\')">Sign In</a>';
+  else sw.innerHTML = '';
+}
+
+async function authLookupEmail(identifier) {
+  if (identifier.includes('@')) return identifier;
+  const { getDocs, collection, query, where, doc, getDoc } = window._fbFns;
+  const db = window._fbDb;
+  try {
+    // Try username
+    let q = query(collection(db, 'users'), where('username', '==', identifier));
+    let snap = await getDocs(q);
+    if (!snap.empty) return snap.docs[0].data().email;
+    // Try mobile (with and without + prefix)
+    const mobile = identifier.replace(/\s/g,'');
+    const mobileAlt = mobile.startsWith('+') ? mobile.slice(1) : '+' + mobile;
+    for (const m of [mobile, mobileAlt]) {
+      q = query(collection(db, 'users'), where('mobile', '==', m));
+      snap = await getDocs(q);
+      if (!snap.empty) return snap.docs[0].data().email;
+    }
+  } catch(e) { console.warn('Lookup error:', e); }
+  return null;
+}
+
+async function authSignIn() {
+  const identifier = document.getElementById('si-identifier').value.trim();
+  const password = document.getElementById('si-password').value;
+  const errEl = document.getElementById('si-error');
+  errEl.textContent = 'Signing in...';
+  if (!identifier || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
+  try {
+    const email = await authLookupEmail(identifier);
+    if (!email) { errEl.textContent = 'No account found with that username or mobile.'; return; }
+    await window._fbFns.signInWithEmailAndPassword(window._fbAuth, email, password);
+    errEl.textContent = '';
+  } catch(e) {
+    const msgs = { 'auth/user-not-found': 'No account found.', 'auth/wrong-password': 'Incorrect password.', 'auth/invalid-credential': 'Incorrect password.', 'auth/too-many-requests': 'Too many attempts. Try later.' };
+    errEl.textContent = msgs[e.code] || e.message;
+  }
+}
+
+async function authSignUp() {
+  const name = document.getElementById('su-name').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const mobile = document.getElementById('su-mobile').value.trim();
+  const username = document.getElementById('su-username').value.trim();
+  const password = document.getElementById('su-password').value;
+  const confirm = document.getElementById('su-confirm').value;
+  const errEl = document.getElementById('su-error');
+  errEl.textContent = '';
+  if (!name || !email || !username || !password) { errEl.textContent = 'Please fill in all required fields.'; return; }
+  if (password !== confirm) { errEl.textContent = 'Passwords do not match.'; return; }
+  if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+  try {
+    const cred = await window._fbFns.createUserWithEmailAndPassword(window._fbAuth, email, password);
+    await window._fbFns.updateProfile(cred.user, { displayName: name });
+    await window._fbFns.setDoc(window._fbFns.doc(window._fbDb, 'users', cred.user.uid), { name, email, mobile, username, createdAt: Date.now() });
+  } catch(e) {
+    const msgs = { 'auth/email-already-in-use': 'Email already registered.', 'auth/invalid-email': 'Invalid email address.', 'auth/weak-password': 'Password too weak.' };
+    errEl.textContent = msgs[e.code] || e.message;
+  }
+}
+
+async function authForgot() {
+  const email = document.getElementById('fp-email').value.trim();
+  const errEl = document.getElementById('fp-error');
+  const sucEl = document.getElementById('fp-success');
+  errEl.textContent = ''; sucEl.textContent = '';
+  if (!email) { errEl.textContent = 'Please enter your email.'; return; }
+  try {
+    await window._fbFns.sendPasswordResetEmail(window._fbAuth, email);
+    sucEl.textContent = 'Reset link sent! Check your inbox.';
+  } catch(e) {
+    errEl.textContent = e.code === 'auth/user-not-found' ? 'No account with this email.' : e.message;
+  }
+}
+
+// ===== DATABASE TAB =====
+let dbEntries = JSON.parse(localStorage.getItem('db_snapshots') || '[]');
+
+function showDbTab() {
+  const panel = document.getElementById('dbTabPanel');
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) renderDbEntries();
+}
+
+function pushToDatabase() {
+  const days = ['sun','mon','tue','wed','thu'];
+  const dayLabels = { sun:'SUNDAY', mon:'MONDAY', tue:'TUESDAY', wed:'WEDNESDAY', thu:'THURSDAY' };
+  const cols = ['PRODUCTION','COACHING','MEETING','WELLBEING','BREAK/LUNCH','UNAVAILABLE','TOTAL AUX','UTILIZATION','JOB COUNT','BILLING'];
+  const fields = ['prod','coach','meet','well','break','unavail'];
+
+  const rows = [];
+  // Header row (targets)
+  rows.push({
+    label: 'DAY/BILLING',
+    type: 'target',
+    prod: document.getElementById('t_prod')?.textContent || '–',
+    coach: document.getElementById('t_coach')?.textContent || '–',
+    meet: document.getElementById('t_meet')?.textContent || '–',
+    well: document.getElementById('t_well')?.textContent || '–',
+    brk: document.getElementById('t_break')?.textContent || '–',
+    unavail: document.getElementById('t_unavail')?.textContent || '–',
+    aux: document.getElementById('t_aux')?.textContent || '–',
+    util: document.getElementById('t_util')?.textContent || '–',
+    jobs: document.getElementById('target_jobs')?.textContent || '–',
+    billing: document.getElementById('t_billing')?.textContent || '–',
+  });
+  // Daily rows
+  days.forEach(d => {
+    const chk = document.getElementById('chk_' + d);
+    if (!chk) return;
+    rows.push({
+      label: dayLabels[d],
+      type: 'day',
+      prod: document.getElementById('prod_' + d)?.value || '00:00',
+      coach: document.getElementById('coach_' + d)?.value || '00:00',
+      meet: document.getElementById('meet_' + d)?.value || '00:00',
+      well: document.getElementById('well_' + d)?.value || '00:00',
+      brk: document.getElementById('break_' + d)?.value || '00:00',
+      unavail: document.getElementById('unavail_' + d)?.value || '00:00',
+      aux: document.getElementById('aux_' + d)?.textContent || '–',
+      util: document.getElementById('util_' + d)?.textContent || '–',
+      jobs: document.getElementById('jobs_' + d)?.value || '0',
+      billing: document.getElementById('bill_' + d)?.textContent || '–',
+      checked: chk.checked,
+    });
+  });
+  // Total used
+  rows.push({
+    label: 'TOTAL USED', type: 'total',
+    prod: document.getElementById('tot_prod')?.textContent || '–',
+    coach: document.getElementById('tot_coach')?.textContent || '–',
+    meet: document.getElementById('tot_meet')?.textContent || '–',
+    well: document.getElementById('tot_well')?.textContent || '–',
+    brk: document.getElementById('tot_break')?.textContent || '–',
+    unavail: document.getElementById('tot_unavail')?.textContent || '–',
+    aux: document.getElementById('tot_aux')?.textContent || '–',
+    util: document.getElementById('tot_util')?.textContent || '–',
+    jobs: document.getElementById('tot_jobs')?.textContent || '–',
+    billing: document.getElementById('tot_billing')?.textContent || '–',
+  });
+  // Balance
+  rows.push({
+    label: 'TOTAL BALANCE', type: 'balance',
+    prod: document.getElementById('bal_prod')?.textContent || '–',
+    coach: document.getElementById('bal_coach')?.textContent || '–',
+    meet: document.getElementById('bal_meet')?.textContent || '–',
+    well: document.getElementById('bal_well')?.textContent || '–',
+    brk: '–', unavail: '–',
+    aux: document.getElementById('bal_aux')?.textContent || '–',
+    util: document.getElementById('bal_util')?.textContent || '–',
+    jobs: document.getElementById('bal_jobs')?.textContent || '–',
+    billing: document.getElementById('bal_billing')?.textContent || '–',
+  });
+
+  const weekLabel = document.getElementById('weekLabelBar')?.textContent || '–';
+  const entry = { id: Date.now(), week: weekLabel, pushedAt: new Date().toLocaleString(), rows };
+  dbEntries.unshift(entry);
+  localStorage.setItem('db_snapshots', JSON.stringify(dbEntries));
+
+  // Show db tab
+  document.getElementById('dbTabPanel').classList.add('open');
+  renderDbEntries();
+
+  const msg = document.getElementById('dbPushMsg');
+  msg.textContent = '✓ Snapshot saved!';
+  setTimeout(() => msg.textContent = '', 2500);
+}
+
+function renderDbEntries() {
+  const container = document.getElementById('dbEntriesList');
+  if (!dbEntries.length) {
+    container.innerHTML = '<div class="db-empty">No snapshots yet. Click "Push to Database" to capture the main table.</div>';
+    return;
+  }
+  container.innerHTML = dbEntries.map((entry, idx) => `
+    <div class="db-entry">
+      <div class="db-entry-header">
+        <span>📅 ${entry.week} &nbsp;|&nbsp; Pushed: ${entry.pushedAt}</span>
+        <span class="db-del" onclick="deleteDbEntry(${idx})" title="Delete">✕</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="db-table">
+          <tr>
+            <th>DAY/AUXCODE</th>
+            <th>PRODUCTION</th><th>COACHING</th><th>MEETING</th><th>WELLBEING</th>
+            <th>BREAK/LUNCH</th><th>UNAVAILABLE</th><th>TOTAL AUX</th>
+            <th>UTILIZATION</th><th>JOB COUNT</th><th>BILLING</th>
+          </tr>
+          ${entry.rows.map(r => `
+            <tr class="${r.type === 'total' ? 'db-total' : r.type === 'balance' ? 'db-balance' : ''}">
+              <td style="text-align:left;font-weight:700;">${r.label}</td>
+              <td>${r.prod}</td><td>${r.coach}</td><td>${r.meet}</td><td>${r.well}</td>
+              <td>${r.brk}</td><td>${r.unavail}</td><td>${r.aux}</td>
+              <td>${r.util}</td><td>${r.jobs}</td><td>${r.billing}</td>
+            </tr>`).join('')}
+        </table>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteDbEntry(idx) {
+  dbEntries.splice(idx, 1);
+  localStorage.setItem('db_snapshots', JSON.stringify(dbEntries));
+  renderDbEntries();
+}
+
+function clearAllDb() {
+  if (!confirm('Delete all snapshots?')) return;
+  dbEntries = [];
+  localStorage.setItem('db_snapshots', '[]');
+  renderDbEntries();
+}
+
+// ===== SYNC FUNCTION =====
+async function syncData() {
+  const btn = document.getElementById('syncBtn');
+  btn.textContent = '↻ SYNCING...';
+  btn.style.opacity = '0.6';
+  try {
+    await window.saveUserData();
+    btn.textContent = '✓ SYNCED';
+    setTimeout(() => { btn.textContent = '☁ SYNC'; btn.style.opacity = '1'; }, 2000);
+  } catch(e) {
+    btn.textContent = '✗ FAILED';
+    btn.style.color = '#ffaaaa';
+    setTimeout(() => { btn.textContent = '☁ SYNC'; btn.style.opacity = '1'; btn.style.color = '#E8F0F8'; }, 2500);
+  }
+}
+
+// ===== SETTINGS FUNCTIONS =====
+async function openSettings() {
+  const user = window._fbAuth.currentUser;
+  if (!user) return;
+  // pre-fill current values
+  document.getElementById('set-name').value = user.displayName || '';
+  document.getElementById('set-email').value = user.email || '';
+  try {
+    const snap = await window._fbFns.getDoc(window._fbFns.doc(window._fbDb, 'users', user.uid));
+    if (snap.exists()) {
+      const d = snap.data();
+      document.getElementById('set-username').value = d.username || '';
+      document.getElementById('set-mobile').value = d.mobile || '';
+    }
+  } catch(e) {}
+  document.getElementById('settingsModal').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
+  ['set-profile-msg','set-email-msg','set-pass-msg'].forEach(id => document.getElementById(id).textContent = '');
+}
+
+async function settingsSaveProfile() {
+  const user = window._fbAuth.currentUser;
+  if (!user) return;
+  const name = document.getElementById('set-name').value.trim();
+  const username = document.getElementById('set-username').value.trim();
+  const mobile = document.getElementById('set-mobile').value.trim();
+  const msg = document.getElementById('set-profile-msg');
+  msg.style.color = '#888'; msg.textContent = 'Saving...';
+  try {
+    await window._fbFns.updateProfile(user, { displayName: name });
+    await window._fbFns.setDoc(window._fbFns.doc(window._fbDb, 'users', user.uid),
+      { name, username, mobile, email: user.email, uid: user.uid }, { merge: true });
+    const nameEl = document.querySelector('.top-name');
+    if (nameEl) nameEl.textContent = name;
+    msg.style.color = '#27ae60'; msg.textContent = '✓ Profile updated!';
+  } catch(e) { msg.style.color = '#c0392b'; msg.textContent = 'Error: ' + (e.code || e.message); }
+}
+
+async function settingsSaveEmail() {
+  const { EmailAuthProvider, reauthenticateWithCredential, updateEmail } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+  const user = window._fbAuth.currentUser;
+  const newEmail = document.getElementById('set-email').value.trim();
+  const pass = document.getElementById('set-email-pass').value;
+  const msg = document.getElementById('set-email-msg');
+  msg.style.color = '#27ae60'; msg.textContent = 'Updating...';
+  try {
+    const cred = EmailAuthProvider.credential(user.email, pass);
+    await reauthenticateWithCredential(user, cred);
+    await updateEmail(user, newEmail);
+    await window._fbFns.setDoc(window._fbFns.doc(window._fbDb, 'users', user.uid), { email: newEmail }, { merge: true });
+    msg.textContent = '✓ Email updated!';
+  } catch(e) {
+    msg.style.color = '#c0392b';
+    msg.textContent = e.code === 'auth/wrong-password' ? 'Incorrect current password.' : e.message;
+  }
+}
+
+async function settingsSavePassword() {
+  const { EmailAuthProvider, reauthenticateWithCredential, updatePassword } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+  const user = window._fbAuth.currentUser;
+  const curPass = document.getElementById('set-cur-pass').value;
+  const newPass = document.getElementById('set-new-pass').value;
+  const confPass = document.getElementById('set-confirm-pass').value;
+  const msg = document.getElementById('set-pass-msg');
+  msg.style.color = '#27ae60'; msg.textContent = '';
+  if (newPass !== confPass) { msg.style.color = '#c0392b'; msg.textContent = 'Passwords do not match.'; return; }
+  if (newPass.length < 6) { msg.style.color = '#c0392b'; msg.textContent = 'Min 6 characters.'; return; }
+  msg.textContent = 'Updating...';
+  try {
+    const cred = EmailAuthProvider.credential(user.email, curPass);
+    await reauthenticateWithCredential(user, cred);
+    await updatePassword(user, newPass);
+    msg.textContent = '✓ Password changed!';
+    document.getElementById('set-cur-pass').value = '';
+    document.getElementById('set-new-pass').value = '';
+    document.getElementById('set-confirm-pass').value = '';
+  } catch(e) {
+    msg.style.color = '#c0392b';
+    msg.textContent = e.code === 'auth/wrong-password' ? 'Incorrect current password.' : e.message;
+  }
+}
+
+function authSignOut() {
+  window.saveUserData().then(() => window._fbFns.signOut(window._fbAuth));
+}
+
+</script>
+</div><!-- end page -->
+
+<!-- ===== SETTINGS MODAL ===== -->
+<div id="settingsModal">
+  <div class="settings-card">
+    <h3>ACCOUNT SETTINGS <span onclick="closeSettings()">✕</span></h3>
+
+    <div class="settings-section">Profile</div>
+    <div class="auth-field"><label>Display Name</label><input type="text" id="set-name" placeholder="Full name"></div>
+    <div class="auth-field"><label>Username</label><input type="text" id="set-username" placeholder="Username"></div>
+    <div class="auth-field"><label>Mobile</label><input type="tel" id="set-mobile" placeholder="+91 9999999999"></div>
+    <button class="auth-btn" onclick="settingsSaveProfile()">SAVE PROFILE</button>
+    <div class="settings-save" id="set-profile-msg"></div>
+
+    <div class="settings-section">Change Email</div>
+    <div class="auth-field"><label>New Email</label><input type="email" id="set-email" placeholder="new@email.com"></div>
+    <div class="auth-field"><label>Current Password</label><input type="password" id="set-email-pass" placeholder="Verify password"></div>
+    <button class="auth-btn" onclick="settingsSaveEmail()">UPDATE EMAIL</button>
+    <div class="settings-save" id="set-email-msg"></div>
+
+    <div class="settings-section">Change Password</div>
+    <div class="auth-field"><label>Current Password</label><input type="password" id="set-cur-pass" placeholder="Current password"></div>
+    <div class="auth-field"><label>New Password</label><input type="password" id="set-new-pass" placeholder="Min 6 characters"></div>
+    <div class="auth-field"><label>Confirm New Password</label><input type="password" id="set-confirm-pass" placeholder="Repeat new password"></div>
+    <button class="auth-btn" onclick="settingsSavePassword()">CHANGE PASSWORD</button>
+    <div class="settings-save" id="set-pass-msg"></div>
+  </div>
+</div>
+</div><!-- end mainApp -->
+</body>
+</html>
