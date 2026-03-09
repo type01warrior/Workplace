@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>Mono Cool – Cloud Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Lexend:wght@400;700&family=Pacifico&display=swap" rel="stylesheet">
 <style>
@@ -432,6 +432,50 @@
     font-size: 9px;
     padding: 1px 2px;
   }
+
+  .top-bar { flex-direction:column !important; gap:5px !important; padding:10px 10px 8px !important; }
+  .tb-r1,.tb-r2,.tb-r3 { display:flex; align-items:center; width:100%; gap:5px; }
+  .tb-username { font-family:'Lexend',sans-serif; font-size:16px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%; }
+  .tb-week { margin-left:auto; font-family:'Lexend',sans-serif; font-size:11px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
+  .tb-btn2 { padding:4px 10px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; white-space:nowrap; }
+  .tb-btn2-red { background:rgba(192,57,43,0.7) !important; }
+  .tb-time { margin-left:auto; font-family:'Lexend',sans-serif; font-size:10px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
+  .tb-wd { font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
+  .tb-r3 { gap:4px; }
+  .tb-btn3 { flex:1; padding:4px 2px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:8px; cursor:pointer; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tb-btn3-white { background:#fff !important; color:#1C2B3A !important; border:none !important; }
+
+  .four-grid { display:grid !important; grid-template-columns:1fr 1fr !important; gap:5px; width:100%; }
+  .fg-cell { min-width:0; display:flex; flex-direction:column; gap:3px; }
+  .fg-cell .tcard-compact { width:100% !important; display:block !important; }
+  .fg-cell .tcard-compact table { width:100% !important; table-layout:fixed !important; }
+  .fg-cell .tcard-compact td, .fg-cell .tcard-compact th { font-size:8px !important; padding:2px 2px !important; height:auto !important; line-height:1.3 !important; overflow:hidden !important; text-overflow:ellipsis !important; white-space:nowrap !important; }
+  .fg-cell .tcard-compact td:first-child { text-align:left !important; width:55% !important; }
+  .fg-cell .tcard-compact td:not(:first-child) { text-align:center !important; }
+  .fg-cell input[type=number],.fg-cell input[type=text] { font-size:8px !important; padding:1px 2px !important; min-height:0 !important; height:auto !important; }
+  .fg-btns { display:flex; gap:3px; }
+  .fg-btn { flex:1; padding:3px 2px; font-family:'Lexend',sans-serif; font-size:7.5px; font-weight:700; border:none; border-radius:5px; cursor:pointer; }
+  .fg-btn-dark { background:#1C2B3A; color:#E8F0F8; }
+  .fg-btn-blue { background:#2E4A62; color:#E8F0F8; }
+
+  @media screen and (max-width:768px) {
+    body { min-width:0 !important; padding:0 !important; margin:0 !important; }
+    .page { padding:4px !important; margin-top:36px !important; }
+    .sections { grid-template-columns:1fr !important; gap:6px !important; }
+    .divider { display:none !important; }
+    .panels { grid-template-columns:1fr !important; gap:6px !important; }
+    .tcard,.main-section,.scroll-wrap { overflow-x:auto !important; }
+    td,th { font-size:9px !important; padding:2px 3px !important; white-space:nowrap !important; }
+    input[type=text],input[type=time],input[type=number],input.dur { font-size:9px !important; min-height:20px !important; padding:1px 2px !important; }
+    input[type=checkbox] { width:16px !important; height:16px !important; }
+    .toggle-btn { padding:4px 8px !important; font-size:9px !important; }
+    .wo-pill { padding:3px 8px !important; font-size:9px !important; }
+    .weekoff-bar { flex-wrap:wrap !important; padding:4px 6px !important; }
+    .weekoff-pills { flex-wrap:wrap !important; }
+    .auth-card { width:95vw !important; }
+    #settingsModal .settings-card { width:95vw !important; }
+    .sec-header { font-size:9px !important; padding:2px 4px !important; }
+  }
 </style>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -515,7 +559,7 @@
       document.getElementById('authOverlay').style.display = 'none';
       document.getElementById('mainApp').style.display = 'block';
       const displayName = user.displayName || user.email.split('@')[0];
-      const nameEl = document.querySelector('.top-name');
+      const nameEl = document.getElementById('topNameSpan');
       if (nameEl) nameEl.textContent = displayName;
       await window.loadUserData(user.uid);
       // auto-save every 30s
@@ -866,25 +910,26 @@ body.dark .db-entry { border-color: #333; }
 
 <!-- TOP BAR -->
 <div class="top-bar">
-  <span class="top-name">Mohammed Akram Khan</span>
-  <span class="top-divider">|</span>
-  <span class="top-info">Working Days: <strong id="workingDays">5</strong></span>
-  <span class="top-divider">|</span>
-  <div class="dm-toggle" onclick="toggleDarkMode()" title="Toggle Dark/Light Mode">
-    <span class="pill-option active" id="pill-light">☀️ Light</span>
-    <span class="pill-option" id="pill-dark">🌙 Dark</span>
+  <div class="tb-r1">
+    <span class="tb-username" id="topNameSpan">Mohammed Akram Khan</span>
+    <span class="tb-week" id="weekLabelBar">–</span>
   </div>
-  <span class="top-divider">|</span>
-  <button onclick="openSettings()" style="padding:3px 10px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; letter-spacing:0.5px;" title="Settings">⚙ SETTINGS</button>
-  <span class="top-divider">|</span>
-  <button onclick="authSignOut()" style="padding:3px 10px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; letter-spacing:0.5px;" title="Sign Out">⏻ LOGOUT</button>
-  <span class="top-divider">|</span>
-  <button onclick="syncData()" id="syncBtn" style="padding:3px 10px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; letter-spacing:0.5px;" title="Sync to Cloud">☁ SYNC</button>
-  <span class="top-divider">|</span>
-  <button onclick="resetAllFields()" style="padding:3px 10px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:#fff; color:#1C2B3A; border:none; border-radius:10px; cursor:pointer; letter-spacing:0.5px;">↺ RESET</button>
-  <span class="top-time" id="timeNow" style="margin-left:auto; font-size:13px; font-weight:700; letter-spacing:1px;"></span>
-  <span style="color:#fff; opacity:0.5; font-size:13px; padding:0 6px;">|</span>
-  <span style="font-size:13px; font-weight:700; letter-spacing:0.5px; color:#E8F0F8;" id="weekLabelBar">–</span>
+  <div class="tb-r2">
+    <div class="dm-toggle" onclick="toggleDarkMode()">
+      <span class="pill-option active" id="pill-light">☀️ Light</span>
+      <span class="pill-option" id="pill-dark">🌙 Dark</span>
+    </div>
+    <button onclick="syncData()" id="syncBtn" class="tb-btn2">☁ SYNC</button>
+    <button onclick="authSignOut()" class="tb-btn2 tb-btn2-red">⏻ LOGOUT</button>
+    <span class="tb-time" id="timeNow"></span>
+    <span class="tb-wd">WD:<strong id="workingDays">5</strong></span>
+  </div>
+  <div class="tb-r3">
+    <button onclick="showDbTab()" id="dbTabBtn" class="tb-btn3">DATABASE</button>
+    <button onclick="pushToDatabase()" class="tb-btn3">⬆ PUSH TO DB</button>
+    <button onclick="resetAllFields()" class="tb-btn3 tb-btn3-white">↺ RESET</button>
+    <button onclick="openSettings()" class="tb-btn3">⚙ SETTINGS</button>
+  </div>
 </div>
 
 <!-- WEEKOFF SELECTOR -->
@@ -901,8 +946,7 @@ body.dark .db-entry { border-color: #333; }
   </div>
   <span style="font-size:9px;opacity:0.6;">(select 2 week-off days; week: Sat–Fri)</span>
   <div style="margin-left:auto; display:flex; gap:6px; align-items:center;">
-    <button onclick="showDbTab()" id="dbTabBtn" style="padding:3px 12px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:transparent; color:#1C2B3A; border:1px solid #1C2B3A; border-radius:10px; cursor:pointer; letter-spacing:0.5px;">DATABASE</button>
-    <button onclick="pushToDatabase()" style="padding:3px 12px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:#1C2B3A; color:#E8F0F8; border:none; border-radius:10px; cursor:pointer; letter-spacing:0.5px; box-shadow:2px 2px 0 #0d1826;">⬆ PUSH TO DATABASE</button>
+
   </div>
 </div>
 
@@ -1073,129 +1117,67 @@ body.dark .db-entry { border-color: #333; }
 </div>
 
 <!-- ======== BOTTOM PANELS ======== -->
-<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; align-items:flex-start;">
+<div class="four-grid">
 
-  <!-- DAILY / WEEKLY card — sits directly above ACHIEVED/BALANCE, same left column -->
-  <!-- We use a nested layout: left col = daily/weekly stacked above achieved/balance -->
-  <!-- Actually use a single left column div with two tables stacked -->
-
-  <!-- LEFT COLUMN: DAILY/WEEKLY on top, ACHIEVED/BALANCE below -->
-  <div style="display:flex; flex-direction:column; gap:2px;">
-
-    <!-- DAILY / WEEKLY TABLE -->
+  <div class="fg-cell">
     <div class="tcard tcard-compact"><table>
-      <tr>
-        <td class="bg-red left" style="width:110px;">DAY/AUXCODE</td>
-        <td class="bg-red" id="dw_daily_header" style="text-align:center; font-weight:700; min-width:80px;">DAILY</td>
-        <td class="bg-red" id="dw_weekly_header" style="text-align:center; font-weight:700; min-width:80px;">WEEKLY</td>
-      </tr>
-      <tr><td class="left">PRODUCTION</td>   <td id="dw_d_prod">–</td>   <td id="dw_w_prod">–</td></tr>
-      <tr><td class="left">COACHING</td>     <td id="dw_d_coach">–</td>  <td id="dw_w_coach">–</td></tr>
-      <tr><td class="left">MEETING</td>      <td id="dw_d_meet">–</td>   <td id="dw_w_meet">–</td></tr>
-      <tr><td class="left">WELLBEING</td>    <td id="dw_d_well">–</td>   <td id="dw_w_well">–</td></tr>
-      <tr><td class="left">TOTAL BILLING</td><td id="dw_d_billing">–</td><td id="dw_w_billing">–</td></tr>
-      <tr><td class="left">TOTAL AUX</td>    <td id="dw_d_aux">–</td>    <td id="dw_w_aux">–</td></tr>
-      <tr><td class="left">UTILIZATION</td>  <td id="dw_d_util">–</td>   <td id="dw_w_util">–</td></tr>
+      <tr><td class="bg-red left">DAY/AUX</td><td class="bg-red" id="dw_daily_header">DAILY</td><td class="bg-red" id="dw_weekly_header">WEEKLY</td></tr>
+      <tr><td class="left">PRODUCTION</td><td id="dw_d_prod">–</td><td id="dw_w_prod">–</td></tr>
+      <tr><td class="left">COACHING</td><td id="dw_d_coach">–</td><td id="dw_w_coach">–</td></tr>
+      <tr><td class="left">MEETING</td><td id="dw_d_meet">–</td><td id="dw_w_meet">–</td></tr>
+      <tr><td class="left">WELLBEING</td><td id="dw_d_well">–</td><td id="dw_w_well">–</td></tr>
+      <tr><td class="left">BILLING</td><td id="dw_d_billing">–</td><td id="dw_w_billing">–</td></tr>
+      <tr><td class="left">TOTAL AUX</td><td id="dw_d_aux">–</td><td id="dw_w_aux">–</td></tr>
+      <tr><td class="left">UTIL</td><td id="dw_d_util">–</td><td id="dw_w_util">–</td></tr>
     </table></div>
-
-    <!-- COPY BUTTON - Daily/Weekly -->
-    <div style="margin-top:1px; display:flex; gap:6px;">
-      <button onclick="copyDW('daily')" style="flex:1; padding:4px 8px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:#1C2B3A; color:#E8F0F8; border:none; border-radius:6px; cursor:pointer; box-shadow:2px 2px 0 #0d1826; letter-spacing:0.5px;">COPY DAILY</button>
-      <button onclick="copyDW('weekly')" style="flex:1; padding:4px 8px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:#2E4A62; color:#E8F0F8; border:none; border-radius:6px; cursor:pointer; box-shadow:2px 2px 0 #1a2f42; letter-spacing:0.5px;">COPY WEEKLY</button>
+    <div class="fg-btns">
+      <button onclick="copyDW('daily')" class="fg-btn fg-btn-dark">COPY DAILY</button>
+      <button onclick="copyDW('weekly')" class="fg-btn fg-btn-blue">COPY WEEKLY</button>
     </div>
-    <div id="dwToast" style="display:none; margin-top:1px; padding:4px 8px; background:#1C2B3A; color:#E8F0F8; border-radius:6px; font-size:9px; font-weight:700; text-align:center;">Copied!</div>
+    <div id="dwToast" style="display:none;padding:2px 4px;background:#1C2B3A;color:#E8F0F8;border-radius:4px;font-size:8px;text-align:center;">Copied!</div>
+  </div>
 
-    <div style="height:8px;"></div>
-
-    <!-- PANEL 2: BILLING ACHIEVED + BALANCE (merged) -->
+  <div class="fg-cell">
     <div class="tcard tcard-compact"><table>
-      <tr>
-        <td class="bg-red left" style="width:110px;">DAY/AUXCODE</td>
-        <td class="bg-red" style="text-align:center;min-width:80px;">ACHIEVED</td>
-        <td class="bg-red" style="text-align:center;min-width:80px;">BALANCE</td>
-      </tr>
-      <tr><td class="left">PRODUCTION</td>   <td id="p2_prod">–</td>    <td id="p2_bprod">–</td></tr>
-      <tr><td class="left">COACHING</td>     <td id="p2_coach">–</td>   <td id="p2_bcoach">–</td></tr>
-      <tr><td class="left">MEETING</td>      <td id="p2_meet">–</td>    <td id="p2_bmeet">–</td></tr>
-      <tr><td class="left">WELLBEING</td>    <td id="p2_well">–</td>    <td id="p2_bwell">–</td></tr>
-      <tr><td class="left">TOTAL BILLING</td><td id="p2_billing">–</td> <td id="p2_bbilling">–</td></tr>
-      <tr><td class="left">UTILIZATION</td>  <td id="p2_util">–</td>    <td id="p2_butil">–</td></tr>
-      <tr><td class="left">TOTAL COUNT</td>  <td id="p2_count">0</td>   <td id="p2_count_bal">–</td></tr>
+      <tr><td class="bg-red left">DAY/AUX</td><td class="bg-red">ACHIEVED</td><td class="bg-red">BALANCE</td></tr>
+      <tr><td class="left">PRODUCTION</td><td id="p2_prod">–</td><td id="p2_bprod">–</td></tr>
+      <tr><td class="left">COACHING</td><td id="p2_coach">–</td><td id="p2_bcoach">–</td></tr>
+      <tr><td class="left">MEETING</td><td id="p2_meet">–</td><td id="p2_bmeet">–</td></tr>
+      <tr><td class="left">WELLBEING</td><td id="p2_well">–</td><td id="p2_bwell">–</td></tr>
+      <tr><td class="left">BILLING</td><td id="p2_billing">–</td><td id="p2_bbilling">–</td></tr>
+      <tr><td class="left">UTIL</td><td id="p2_util">–</td><td id="p2_butil">–</td></tr>
+      <tr><td class="left">COUNT</td><td id="p2_count">0</td><td id="p2_count_bal">–</td></tr>
     </table></div>
-
-    <!-- COPY BUTTON -->
-    <div style="margin-top:1px; display:flex; gap:6px;">
-      <button onclick="copyData('achieved')" style="flex:1; padding:4px 8px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:#1C2B3A; color:#E8F0F8; border:none; border-radius:6px; cursor:pointer; box-shadow:2px 2px 0 #0d1826; letter-spacing:0.5px;">COPY ACHIEVED</button>
-      <button onclick="copyData('balance')" style="flex:1; padding:4px 8px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:#2E4A62; color:#E8F0F8; border:none; border-radius:6px; cursor:pointer; box-shadow:2px 2px 0 #1a2f42; letter-spacing:0.5px;">COPY BALANCE</button>
+    <div class="fg-btns">
+      <button onclick="copyData('achieved')" class="fg-btn fg-btn-dark">COPY ACHIEVED</button>
+      <button onclick="copyData('balance')" class="fg-btn fg-btn-blue">COPY BALANCE</button>
     </div>
+    <div id="copyToast" style="display:none;padding:2px 4px;background:#1C2B3A;color:#E8F0F8;border-radius:4px;font-size:8px;text-align:center;">Copied!</div>
+  </div>
 
-    <!-- COPY TOAST -->
-    <div id="copyToast" style="display:none; margin-top:1px; padding:4px 8px; background:#1C2B3A; color:#E8F0F8; border-radius:6px; font-size:9px; font-weight:700; text-align:center;">Copied!</div>
-
-  </div><!-- end left flex column -->
-
-  <!-- PANEL 4: WEEKLY TEAM AUX + AHT -->
-  <div style="display:flex; flex-direction:column; gap:6px; min-width:200px;">
+  <div class="fg-cell">
     <div class="tcard tcard-compact"><table>
-      <tr>
-        <td class="bg-red left" style="width:110px;">DAY/AUXCODE</td>
-        <td class="bg-red" colspan="1" style="text-align:center;min-width:80px;">REMAINING BALANCES</td>
-      </tr>
-      <tr>
-        <td class="bg-red left">DAYS LEFT</td>
-        <td class="bg-red input-cell" style="padding:0;">
-          <input type="number" id="daysLeft" value="1" min="0" max="5" style="width:100%;background:transparent;text-align:center;color:#000;" onchange="recalc()">
-        </td>
+      <tr><td class="bg-red left">DAY/AUX</td><td class="bg-red">REMAINING</td></tr>
+      <tr><td class="left">DAYS LEFT</td>
+        <td class="input-cell" style="padding:0;"><input type="number" id="daysLeft" value="1" min="0" max="5" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()"></td>
       </tr>
       <tr><td class="left">PRODUCTION</td><td id="p2_rprod">–</td></tr>
-      <tr><td class="left">AUX</td>       <td id="p2_raux">–</td></tr>
-      <tr><td class="left">TOTAL</td>     <td id="p2_rtotal">–</td></tr>
+      <tr><td class="left">AUX</td><td id="p2_raux">–</td></tr>
+      <tr><td class="left">TOTAL</td><td id="p2_rtotal">–</td></tr>
     </table></div>
-    <div class="tcard tcard-compact" style="width:100%;"><table style="width:100%;">
-      <tr>
-        <td class="bg-red left" style="width:110px;">DAY/AUXCODE</td>
-        <td class="bg-red" style="text-align:center;min-width:60px;">MINS</td>
-      </tr>
-      <tr>
-        <td class="left" style="width:100px;">PRODUCTION</td>
-        <td class="input-cell bg-gray" style="width:60px;padding:0;">
-          <input type="number" id="q_prod" value="2375" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()">
-        </td>
+  </div>
 
-      </tr>
-      <tr>
-        <td class="left">COACHING</td>
-        <td class="input-cell bg-gray" style="padding:0;">
-          <input type="number" id="q_coach" value="65" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()">
-        </td>
-
-      </tr>
-      <tr>
-        <td class="left">MEETING</td>
-        <td class="input-cell bg-gray" style="padding:0;">
-          <input type="number" id="q_meet" value="55" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()">
-        </td>
-
-      </tr>
-      <tr>
-        <td class="left">WELLBEING</td>
-        <td class="input-cell bg-gray" style="padding:0;">
-          <input type="number" id="q_well" value="60" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()">
-        </td>
-      </tr>
-      <tr>
-        <td class="left">JOB COUNT</td>
-        <td class="input-cell bg-gray" style="padding:0;">
-          <input type="number" id="q_jobs" value="1750" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()">
-        </td>
-      </tr>
-      <tr>
-        <td class="left">TOTALS</td>
-        <td id="q_total">–</td>
-      </tr>
+  <div class="fg-cell">
+    <div class="tcard tcard-compact"><table>
+      <tr><td class="bg-red left">DAY/AUX</td><td class="bg-red">MINS</td></tr>
+      <tr><td class="left">PRODUCTION</td><td class="input-cell bg-gray" style="padding:0;"><input type="number" id="q_prod" value="2375" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()"></td></tr>
+      <tr><td class="left">COACHING</td><td class="input-cell bg-gray" style="padding:0;"><input type="number" id="q_coach" value="65" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()"></td></tr>
+      <tr><td class="left">MEETING</td><td class="input-cell bg-gray" style="padding:0;"><input type="number" id="q_meet" value="55" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()"></td></tr>
+      <tr><td class="left">WELLBEING</td><td class="input-cell bg-gray" style="padding:0;"><input type="number" id="q_well" value="60" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()"></td></tr>
+      <tr><td class="left">JOB COUNT</td><td class="input-cell bg-gray" style="padding:0;"><input type="number" id="q_jobs" value="1750" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()"></td></tr>
+      <tr><td class="left">TOTALS</td><td id="q_total">–</td></tr>
     </table></div>
-
-</div>
+  </div>
 
 </div><!-- end panels -->
 
@@ -2020,7 +2002,7 @@ async function settingsSaveProfile() {
     await window._fbFns.updateProfile(user, { displayName: name });
     await window._fbFns.setDoc(window._fbFns.doc(window._fbDb, 'users', user.uid),
       { name, username, mobile, email: user.email, uid: user.uid }, { merge: true });
-    const nameEl = document.querySelector('.top-name');
+    const nameEl = document.getElementById('topNameSpan');
     if (nameEl) nameEl.textContent = name;
     msg.style.color = '#27ae60'; msg.textContent = '✓ Profile updated!';
   } catch(e) { msg.style.color = '#c0392b'; msg.textContent = 'Error: ' + (e.code || e.message); }
