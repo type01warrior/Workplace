@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>Mono Cool – Cloud Dashboard</title>
+<title>WorkPlace - Designed By Type01warrior</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Lexend:wght@400;700&family=Pacifico&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -349,7 +349,7 @@
   .bg-gray { background-color: var(--bg-gray) !important; }
   body.dark .bg-red, body.dark td.bg-red  { background-color: var(--bg-red) !important; color: #000 !important; }
   body.dark .bg-blue, body.dark td.bg-blue { background-color: var(--bg-blue) !important; color: #000 !important; }
-  body.dark tr.bg-gray td { background-color: var(--bg-gray) !important; color: #000 !important; }
+  body.dark tr.bg-gray td { background-color: var(--bg-gray) !important; color: #e8e8e8 !important; }
   body.dark tr.total-used td { background-color: var(--bg-blue) !important; color: #000 !important; }
   body.dark tr.total-balance td { background-color: var(--bg-red) !important; color: #000 !important; }
   body.dark tr.bg-red td { background-color: var(--bg-red) !important; color: #000 !important; }
@@ -1316,9 +1316,6 @@ function recalc() {
   const numDays = activeDays.length;
   document.getElementById('workingDays').textContent = numDays;
   document.getElementById('tot_days').textContent = numDays;
-  // Auto-update job count target: 350/day
-  const qJobsEl = document.getElementById('q_jobs');
-  if (qJobsEl) qJobsEl.value = 350 * numDays;
 
   // Per-day calculations
   let totProd = 0, totCoach = 0, totMeet = 0, totWell = 0, totBreak = 0, totUnavail = 0, totJobs = 0;
