@@ -445,7 +445,7 @@
   .tb-btn3 { flex:1; padding:4px 2px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:8px; cursor:pointer; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .tb-btn3-white { background:#fff !important; color:#1C2B3A !important; border:none !important; }
 
-  .four-grid { display:grid !important; grid-template-columns:1fr 1fr 1fr !important; gap:5px; width:100%; }
+  .four-grid { display:grid !important; grid-template-columns:1fr 1fr 1fr 1fr !important; gap:5px; width:100%; }
   .fg-cell { min-width:0; display:flex; flex-direction:column; gap:3px; }
   .fg-cell .tcard-compact { width:100% !important; display:block !important; }
   .fg-cell .tcard-compact table { width:100% !important; table-layout:fixed !important; }
@@ -531,7 +531,25 @@
   window.loadUserData = async function(uid) {
     try {
       const snap = await window._fbFns.getDoc(window._fbFns.doc(db, 'userData', uid));
-      if (!snap.exists()) return;
+      if (!snap.exists()) {
+        // NEW USER — show onboarding, set all inputs to 00:00 defaults
+        const days = ['sun','mon','tue','wed','thu'];
+        const durFields = ['prod','coach','meet','well','break','unavail'];
+        days.forEach(d => {
+          durFields.forEach(f => {
+            const el = document.getElementById(`${f}_${d}`);
+            if (el) el.value = '00:00';
+          });
+        });
+        // Set billing targets to 0 until onboarding
+        ['q_prod','q_coach','q_meet','q_well','q_jobs'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '0';
+        });
+        if (window.recalc) window.recalc();
+        openOnboarding();
+        return;
+      }
       const data = snap.data();
       const days = ['sun','mon','tue','wed','thu'];
       const durFields = ['prod','coach','meet','well','break','unavail'];
@@ -561,10 +579,13 @@
       const displayName = user.displayName || user.email.split('@')[0];
       const nameEl = document.getElementById('topNameSpan');
       if (nameEl) nameEl.textContent = displayName;
+      initUserStorage(user.uid);
       await window.loadUserData(user.uid);
+      if (window.recalc) window.recalc();
       // auto-save every 30s
       window._autoSaveInterval = setInterval(() => window.saveUserData(), 30000);
     } else {
+      _currentUid = null;
       document.getElementById('authOverlay').style.display = 'flex';
       document.getElementById('mainApp').style.display = 'none';
       clearInterval(window._autoSaveInterval);
@@ -572,6 +593,66 @@
   });
 </script>
 <style>
+
+/* ===== ONBOARDING MODAL ===== */
+#onboardingModal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); z-index: 99999;
+  align-items: center; justify-content: center;
+  font-family: 'Lexend', sans-serif;
+}
+#onboardingModal.open { display: flex; }
+.onboard-card {
+  background: #fff; border: 2px solid #1C2B3A;
+  box-shadow: 6px 6px 0 #1C2B3A; border-radius: 8px;
+  padding: 28px 32px; width: 380px; max-width: 95vw;
+}
+body.dark .onboard-card { background: #1a1a1a; border-color: #4a9eff; box-shadow: 6px 6px 0 #000; color: #e8e8e8; }
+.onboard-card h3 { font-size: 14px; font-weight: 900; color: #1C2B3A; margin-bottom: 4px; letter-spacing: 1px; }
+body.dark .onboard-card h3 { color: #4a9eff; }
+.onboard-card p { font-size: 9px; color: #888; margin-bottom: 18px; }
+.onboard-row { margin-bottom: 12px; }
+.onboard-row label { display: block; font-size: 9px; font-weight: 700; color: #1C2B3A; margin-bottom: 4px; letter-spacing: 0.5px; }
+body.dark .onboard-row label { color: #ccc; }
+.onboard-row input { width: 100%; box-sizing: border-box; border: 1px solid #1C2B3A; border-radius: 4px; padding: 7px 10px; font-size: 11px; font-family: 'Lexend', sans-serif; outline: none; }
+body.dark .onboard-row input { background: #2a2a2a; color: #e8e8e8; border-color: #444; }
+.onboard-row .hint { font-size: 8px; color: #aaa; margin-top: 2px; }
+.onboard-save-btn { width: 100%; margin-top: 16px; padding: 10px; background: #1C2B3A; color: #fff; border: none; border-radius: 4px; font-size: 11px; font-weight: 700; font-family: 'Lexend', sans-serif; cursor: pointer; letter-spacing: 1px; }
+.onboard-save-btn:hover { background: #2a3f54; }
+.onboard-err { font-size: 9px; color: #c0392b; margin-top: 8px; min-height: 14px; }
+.ob-wo-pill { padding: 4px 9px; border: 1px solid #1C2B3A; border-radius: 12px; font-size: 9px; font-weight: 700; cursor: pointer; user-select: none; color: #1C2B3A; background: #fff; transition: all 0.15s; }
+.ob-wo-pill.active { background: #1C2B3A; color: #fff; }
+body.dark .ob-wo-pill { border-color: #4a9eff; color: #ccc; background: #2a2a2a; }
+body.dark .ob-wo-pill.active { background: #4a9eff; color: #000; }
+
+/* ===== DELETE ACCOUNT MODAL ===== */
+#deleteAccountModal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); z-index: 99998;
+  align-items: center; justify-content: center;
+  font-family: 'Lexend', sans-serif;
+}
+#deleteAccountModal.open { display: flex; }
+.del-card {
+  background: #fff; border: 2px solid #c0392b;
+  box-shadow: 6px 6px 0 #c0392b; border-radius: 8px;
+  padding: 24px 28px; width: 360px; max-width: 95vw;
+}
+body.dark .del-card { background: #1a1a1a; color: #e8e8e8; }
+.del-card h3 { font-size: 13px; font-weight: 900; color: #c0392b; margin-bottom: 6px; }
+.del-card p { font-size: 9px; color: #888; margin-bottom: 14px; line-height: 1.5; }
+.del-export-btn { width: 100%; padding: 9px; margin-bottom: 8px; background: #1C2B3A; color: #fff; border: none; border-radius: 4px; font-size: 10px; font-weight: 700; font-family: 'Lexend', sans-serif; cursor: pointer; }
+.del-export-btn:hover { background: #2a3f54; }
+.del-confirm-section { border-top: 1px solid #eee; padding-top: 12px; margin-top: 4px; }
+body.dark .del-confirm-section { border-color: #333; }
+.del-confirm-section label { font-size: 9px; font-weight: 700; color: #c0392b; display: block; margin-bottom: 5px; }
+.del-confirm-section input { width: 100%; box-sizing: border-box; border: 1px solid #c0392b; border-radius: 4px; padding: 7px 10px; font-size: 11px; font-family: 'Lexend', sans-serif; outline: none; }
+body.dark .del-confirm-section input { background: #2a2a2a; color: #e8e8e8; }
+.del-btns { display: flex; gap: 8px; margin-top: 14px; }
+.del-btn-cancel { flex: 1; padding: 9px; background: #eee; color: #333; border: none; border-radius: 4px; font-size: 10px; font-weight: 700; font-family: 'Lexend', sans-serif; cursor: pointer; }
+.del-btn-delete { flex: 1; padding: 9px; background: #c0392b; color: #fff; border: none; border-radius: 4px; font-size: 10px; font-weight: 700; font-family: 'Lexend', sans-serif; cursor: pointer; }
+.del-btn-delete:disabled { opacity: 0.4; cursor: not-allowed; }
+.del-err { font-size: 9px; color: #c0392b; margin-top: 6px; min-height: 12px; }
 
 /* ===== SETTINGS MODAL ===== */
 #settingsModal {
@@ -704,11 +785,116 @@ body.dark .acc-label { color: #ccc; }
 .acc-value-err   { color: #888; font-size: 12px; }
 
 
+/* Disabled (unchecked) day rows */
+tr.row-disabled td.input-cell { background: #e0e0e0 !important; }
+tr.row-disabled td.input-cell input { background: #e0e0e0 !important; color: #bbb !important; pointer-events: none; }
+tr.row-disabled td { color: #bbb !important; }
+body.dark tr.row-disabled td.input-cell { background: #141414 !important; }
+body.dark tr.row-disabled td.input-cell input { background: #141414 !important; color: #3a3a3a !important; }
+body.dark tr.row-disabled td { color: #3a3a3a !important; }
+tr.row-disabled input[type="checkbox"] { pointer-events: auto; }
+
+/* ===== DATABASE MODAL ===== */
+#dbModal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); z-index: 8500;
+  align-items: flex-start; justify-content: center;
+  padding-top: 40px; font-family: 'Lexend', sans-serif;
+  overflow-y: auto;
+}
+#dbModal.open { display: flex; }
+.db-modal-card {
+  background: #fff; border: 1px solid #1C2B3A;
+  box-shadow: 4px 4px 0 #1C2B3A; border-radius: 8px;
+  padding: 16px 18px; width: 96vw; max-width: 1300px;
+  margin-bottom: 40px;
+}
+body.dark .db-modal-card { background: #1a1a1a; border-color: #333; box-shadow: 4px 4px 0 #000; }
+.db-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.db-modal-header h4 { font-size: 13px; font-weight: 700; color: #1C2B3A; letter-spacing: 0.5px; }
+body.dark .db-modal-header h4 { color: #e8e8e8; }
+
+/* ===== ATTENDANCE MODAL ===== */
+#attendanceModal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); z-index: 8500;
+  align-items: flex-start; justify-content: center;
+  padding: 30px 10px 40px; font-family: 'Lexend', sans-serif;
+  overflow-y: auto;
+}
+#attendanceModal.open { display: flex; }
+.att-card {
+  background: #fff; border: 1px solid #1C2B3A;
+  box-shadow: 4px 4px 0 #1C2B3A; border-radius: 8px;
+  padding: 16px 18px; width: 96vw; max-width: 1300px;
+  margin-bottom: 40px;
+}
+body.dark .att-card { background: #1a1a1a; border-color: #333; box-shadow: 4px 4px 0 #000; }
+.att-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.att-header h4 { font-size: 13px; font-weight: 700; color: #1C2B3A; }
+body.dark .att-header h4 { color: #e8e8e8; }
+.att-year-nav { display: flex; align-items: center; gap: 10px; }
+.att-year-nav button { background: #1C2B3A; color: #E8F0F8; border: none; border-radius: 4px; padding: 3px 10px; font-family: 'Lexend', sans-serif; font-size: 11px; font-weight: 700; cursor: pointer; }
+.att-year-label { font-size: 15px; font-weight: 700; color: #1C2B3A; min-width: 50px; text-align: center; }
+body.dark .att-year-label { color: #e8e8e8; }
+.att-calendar-wrap { overflow-x: auto; }
+.att-calendar { border-collapse: collapse; font-size: 8px; font-weight: 700; font-family: 'Lexend', sans-serif; }
+.att-calendar th, .att-calendar td { border: 1px solid #B0BCC8; padding: 1px 2px; text-align: center; white-space: nowrap; min-width: 22px; width: 22px; height: 18px; line-height: 1; }
+body.dark .att-calendar th, body.dark .att-calendar td { border-color: #3a3a3a; }
+.att-calendar thead th { background: #1C2B3A; color: #E8F0F8; font-size: 7.5px; padding: 2px 1px; }
+.att-calendar th.week-end-th, .att-calendar td.week-end { border-right: 2px solid #1C2B3A !important; }
+body.dark .att-calendar th.week-end-th, body.dark .att-calendar td.week-end { border-right: 2px solid #6699bb !important; }
+.att-calendar th.year-header { background: #1C2B3A; color: #E8F0F8; font-size: 11px; font-weight: 700; padding: 4px; letter-spacing: 1px; }
+.att-month-label { background: #2E4A62 !important; color: #E8F0F8 !important; font-size: 8px !important; text-align: left !important; padding-left: 5px !important; min-width: 65px !important; width: 65px !important; }
+body.dark .att-month-label { background: #1a3a5c !important; }
+.att-cell { cursor: pointer; background: #EAF1F8; transition: background 0.15s; font-size: 8px; }
+body.dark .att-cell { background: #222; color: #e8e8e8; }
+.att-cell:hover { background: #c8dff5 !important; }
+body.dark .att-cell:hover { background: #1a3a5c !important; }
+.att-cell.empty { background: #D6E4F0 !important; cursor: default; color: transparent; }
+body.dark .att-cell.empty { background: #111 !important; }
+/* Alternating month row backgrounds */
+.att-row-odd .att-cell:not(.att-WO):not(.att-PL):not(.att-HL):not(.att-UL):not(.att-SL) { background: #EAF1F8; }
+.att-row-even .att-cell:not(.att-WO):not(.att-PL):not(.att-HL):not(.att-UL):not(.att-SL) { background: #D0E4F5; }
+.att-row-odd .att-cell.empty { background: #E0EBF5 !important; }
+.att-row-even .att-cell.empty { background: #C4D8EC !important; }
+body.dark .att-row-odd .att-cell:not(.att-WO):not(.att-PL):not(.att-HL):not(.att-UL):not(.att-SL) { background: #1e2a38; }
+body.dark .att-row-even .att-cell:not(.att-WO):not(.att-PL):not(.att-HL):not(.att-UL):not(.att-SL) { background: #16212e; }
+body.dark .att-row-odd .att-cell.empty { background: #161f2a !important; }
+body.dark .att-row-even .att-cell.empty { background: #101820 !important; }
+.att-WO { background: #B7E1CD !important; color: #1C2B3A !important; }
+.att-PL { background: #FFE599 !important; color: #1C2B3A !important; }
+.att-HL { background: #9FC5E8 !important; color: #1C2B3A !important; }
+.att-UL { background: #EA9999 !important; color: #1C2B3A !important; }
+.att-SL { background: #F9CB9C !important; color: #1C2B3A !important; }
+.att-legend { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+.att-legend-item { display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; font-family: 'Lexend', sans-serif; }
+.att-legend-box { width: 26px; height: 18px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; color: #1C2B3A; border: 1px solid #bbb; }
+body.dark .att-legend-item { color: #e8e8e8; }
+#leavePicker { display: none; position: fixed; z-index: 9500; background: #fff; border: 1px solid #1C2B3A; box-shadow: 3px 3px 0 #1C2B3A; border-radius: 6px; padding: 8px; min-width: 190px; font-family: 'Lexend', sans-serif; }
+body.dark #leavePicker { background: #1a1a1a; border-color: #444; box-shadow: 3px 3px 0 #000; }
+.lp-title { font-size: 9px; font-weight: 700; color: #888; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #eee; }
+body.dark .lp-title { border-color: #333; }
+.lp-option { display: flex; align-items: center; gap: 8px; padding: 5px 6px; cursor: pointer; border-radius: 4px; margin-bottom: 2px; transition: background 0.1s; }
+.lp-option:hover { background: #f0f0f0; }
+body.dark .lp-option:hover { background: #2a2a2a; }
+.lp-badge { width: 28px; height: 20px; border-radius: 3px; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; color: #1C2B3A; flex-shrink: 0; }
+.lp-text { font-size: 10px; font-weight: 700; color: #1C2B3A; }
+body.dark .lp-text { color: #e8e8e8; }
+.lp-clear { border-top: 1px solid #eee; margin-top: 4px; padding-top: 6px; }
+body.dark .lp-clear { border-color: #333; }
+.lp-clear-btn { width: 100%; padding: 4px; background: transparent; border: 1px solid #bbb; border-radius: 4px; font-family: 'Lexend', sans-serif; font-size: 9px; font-weight: 700; color: #888; cursor: pointer; }
+.lp-clear-btn:hover { background: #f5f5f5; color: #333; }
+
 #dbTabPanel {
   display: none;
   margin-top: 6px;
 }
 #dbTabPanel.open { display: block; }
+
 .db-card {
   background: #fff;
   border: 1px solid #1C2B3A;
@@ -829,17 +1015,21 @@ body.dark .db-entry { border-color: #333; }
   letter-spacing: 0.4px;
   text-transform: uppercase;
 }
-.auth-field input {
+.auth-field input, .auth-field input[type="password"] {
   width: 100%;
   padding: 7px 10px;
-  font-family: 'Lexend', sans-serif;
+  font-family: 'Lexend', sans-serif !important;
   font-size: 11px;
+  font-weight: 400 !important;
+  text-align: left !important;
   border: 1px solid #1C2B3A;
   border-radius: 4px;
-  background: #fff;
-  color: #0D1B26;
+  background: #fff !important;
+  color: #0D1B26 !important;
   outline: none;
   transition: box-shadow 0.15s;
+  cursor: text !important;
+  box-sizing: border-box;
 }
 .auth-field input:focus {
   box-shadow: 2px 2px 0 #1C2B3A;
@@ -945,7 +1135,6 @@ body.dark .db-entry { border-color: #333; }
     <div id="form-signup" style="display:none;">
       <div class="auth-field"><label>Name</label><input type="text" id="su-name" placeholder="Full name"></div>
       <div class="auth-field"><label>Email</label><input type="email" id="su-email" placeholder="your@email.com"></div>
-      <div class="auth-field"><label>Mobile</label><input type="tel" id="su-mobile" placeholder="+91 9999999999"></div>
       <div class="auth-field"><label>Username</label><input type="text" id="su-username" placeholder="Choose a username"></div>
       <div class="auth-field"><label>Password</label><input type="password" id="su-password" placeholder="Min 6 characters"></div>
       <div class="auth-field"><label>Confirm Password</label><input type="password" id="su-confirm" placeholder="Repeat password"></div>
@@ -992,6 +1181,7 @@ body.dark .db-entry { border-color: #333; }
   <div class="tb-r3">
     <button onclick="showDbTab()" id="dbTabBtn" class="tb-btn3">DATABASE</button>
     <button onclick="pushToDatabase()" class="tb-btn3">⬆ PUSH TO DB</button>
+    <button onclick="openAttendance()" class="tb-btn3">📅 ATTENDANCE</button>
     <button onclick="resetAllFields()" class="tb-btn3 tb-btn3-white">↺ RESET</button>
     <button onclick="openSettings()" class="tb-btn3">⚙ SETTINGS</button>
   </div>
@@ -1016,20 +1206,54 @@ body.dark .db-entry { border-color: #333; }
 </div>
 
 
-<!-- ======== DATABASE TAB PANEL ======== -->
-<div id="dbTabPanel">
-  <div class="db-card">
-    <div class="db-card-header">
+<!-- ======== DATABASE MODAL ======== -->
+<div id="dbModal">
+  <div class="db-modal-card">
+    <div class="db-modal-header">
       <h4>📊 DATABASE — PUSHED SNAPSHOTS</h4>
       <div style="display:flex;gap:6px;align-items:center;">
         <span class="db-push-msg" id="dbPushMsg"></span>
-        <button onclick="clearAllDb()" style="padding:2px 8px; font-family:'Lexend',sans-serif; font-size:8px; font-weight:700; background:transparent; color:#c0392b; border:1px solid #c0392b; border-radius:6px; cursor:pointer;">CLEAR ALL</button>
-        <button onclick="showDbTab()" style="padding:2px 8px; font-family:'Lexend',sans-serif; font-size:8px; font-weight:700; background:transparent; color:#1C2B3A; border:1px solid #1C2B3A; border-radius:6px; cursor:pointer;">✕ CLOSE</button>
+        <button onclick="clearAllDb()" style="padding:2px 8px;font-family:'Lexend',sans-serif;font-size:8px;font-weight:700;background:transparent;color:#c0392b;border:1px solid #c0392b;border-radius:6px;cursor:pointer;">CLEAR ALL</button>
+        <button onclick="showDbTab()" style="padding:2px 8px;font-family:'Lexend',sans-serif;font-size:8px;font-weight:700;background:transparent;color:#1C2B3A;border:1px solid #1C2B3A;border-radius:6px;cursor:pointer;">✕ CLOSE</button>
       </div>
     </div>
     <div id="dbEntriesList"><div class="db-empty">No snapshots yet. Click "Push to Database" to capture the main table.</div></div>
   </div>
 </div>
+
+<!-- ======== ATTENDANCE MODAL ======== -->
+<div id="attendanceModal">
+  <div class="att-card">
+    <div class="att-header">
+      <h4>📅 ATTENDANCE CALENDAR</h4>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="att-year-nav">
+          <button onclick="attChangeYear(-1)">◀</button>
+          <span class="att-year-label" id="attYearLabel">2026</span>
+          <button onclick="attChangeYear(1)">▶</button>
+        </div>
+        <button onclick="closeAttendance()" style="padding:2px 8px;font-family:'Lexend',sans-serif;font-size:8px;font-weight:700;background:transparent;color:#1C2B3A;border:1px solid #1C2B3A;border-radius:6px;cursor:pointer;">✕ CLOSE</button>
+      </div>
+    </div>
+    <div class="att-calendar-wrap">
+      <table class="att-calendar" id="attCalendarTable"></table>
+    </div>
+  </div>
+</div>
+
+<!-- ======== LEAVE PICKER POPUP ======== -->
+<div id="leavePicker">
+  <div class="lp-title" id="lpDateLabel">Select Leave Type</div>
+  <div class="lp-option" onclick="setLeave('WO')"><span class="lp-badge att-WO">WO</span><span class="lp-text">Week Off</span></div>
+  <div class="lp-option" onclick="setLeave('PL')"><span class="lp-badge att-PL">PL</span><span class="lp-text">Planned Leave</span></div>
+  <div class="lp-option" onclick="setLeave('HL')"><span class="lp-badge att-HL">HL</span><span class="lp-text">Half Day Leave</span></div>
+  <div class="lp-option" onclick="setLeave('UL')"><span class="lp-badge att-UL">UL</span><span class="lp-text">Unplanned Leave</span></div>
+  <div class="lp-option" onclick="setLeave('SL')"><span class="lp-badge att-SL">SL</span><span class="lp-text">Sick Leave</span></div>
+  <div class="lp-clear"><button class="lp-clear-btn" onclick="setLeave(null)">✕ Clear</button></div>
+</div>
+
+<!-- keep old dbTabPanel but hidden -->
+<div id="dbTabPanel"></div>
 
 <!-- ======== TARGET ROW (Row 2 – blue) ======== -->
 <div class="scroll-wrap"><div class="tcard">
@@ -1232,6 +1456,16 @@ body.dark .db-entry { border-color: #333; }
     </table></div>
   </div>
 
+  <div class="fg-cell">
+    <div class="tcard tcard-compact"><table>
+      <tr><td class="bg-red left" colspan="2">TODAY'S BALANCE</td></tr>
+      <tr><td class="left" id="today_day_label" style="font-size:7px;opacity:0.7;">–</td><td id="today_day_val" style="font-size:7px;opacity:0.7;">–</td></tr>
+      <tr><td class="left">PRODUCTION</td><td id="today_prod_bal">–</td></tr>
+      <tr><td class="left">TOTAL AUX</td><td id="today_aux_bal">–</td></tr>
+      <tr><td class="left">BILLING</td><td id="today_bill_bal">–</td></tr>
+      <tr><td class="left">UTIL</td><td id="today_util_val">–</td></tr>
+    </table></div>
+  </div>
 
 </div><!-- end panels -->
 
@@ -1361,7 +1595,27 @@ function colorBal(mins) {
 }
 
 // ===== MAIN RECALC =====
+// ===== ROW DISABLE ON UNCHECK =====
+function updateRowDisabledState() {
+  const tableRows = ['sun','mon','tue','wed','thu'];
+  tableRows.forEach(rowId => {
+    const chk = document.getElementById('chk_' + rowId);
+    const row = document.getElementById('row_' + rowId);
+    if (!chk || !row) return;
+    if (chk.checked) {
+      row.classList.remove('row-disabled');
+      // re-enable all inputs except checkbox
+      row.querySelectorAll('input:not([type="checkbox"])').forEach(inp => inp.disabled = false);
+    } else {
+      row.classList.add('row-disabled');
+      // disable all inputs except checkbox
+      row.querySelectorAll('input:not([type="checkbox"])').forEach(inp => inp.disabled = true);
+    }
+  });
+}
+
 function recalc() {
+  updateRowDisabledState();
   const weekLabel = getWeekLabel();
   const todayName = getTodayDayName();
   const wdayNum = getWorkingDayNum();
@@ -1574,6 +1828,199 @@ function recalc() {
 
   // BILLING col targets (from Q/5)
   const bUtil = (Math.round(qTotal/5)) > 0 ? Math.round(qProd/5) / Math.round(qTotal/5) : null;
+
+  // === TODAY'S BALANCE CARD ===
+  // Use REMAINING per-day targets (t23/t24/t25) so carry-forward is accounted for
+  // t23 = remaining prod / daysLeft, t24 = remaining aux / daysLeft, t25 = remaining billing / daysLeft
+  const todayProdTarget    = daysLeft > 0 ? t23 : tProd;
+  const todayAuxTarget     = daysLeft > 0 ? t24 : tTotAux;
+  const todayBillingTarget = daysLeft > 0 ? t25 : tBilling;
+
+  // Today's actual = prod + coach + meet + well (billing-grade, no break/unavail)
+  const todayBillingActual = tProdToday + tCoachToday + tMeetToday + tWellToday;
+  const todayAuxActual     = tCoachToday + tMeetToday + tWellToday;
+
+  const prodDiff = tProdToday - todayProdTarget;
+  const auxDiff  = todayAuxActual - todayAuxTarget;   // positive = exceeded
+  const billDiff = todayBillingActual - todayBillingTarget;
+  const todayUtil = todayBillingActual > 0 ? (tProdToday / todayBillingActual * 100).toFixed(2) + '%' : '–';
+
+  function todayBal(diff, invertColor) {
+    if (isNaN(diff) || diff === 0) return `<span style="color:#1a7a1a;font-weight:700;">0:00</span>`;
+    const abs = Math.abs(diff);
+    const h = Math.floor(abs/60), m = abs%60;
+    const val = h + ':' + String(m).padStart(2,'0');
+    const isPositive = diff > 0;
+    const isGood = invertColor ? !isPositive : isPositive;
+    const color = isGood ? '#1a7a1a' : '#c0392b';
+    const label = isPositive
+      ? `+${val} <span style="font-size:7px;opacity:0.8;">${invertColor ? 'exceeded' : 'surplus'}</span>`
+      : `–${val} <span style="font-size:7px;opacity:0.8;">deficit</span>`;
+    return `<span style="color:${color};font-weight:700;">${label}</span>`;
+  }
+
+  setText('today_day_label', todayName + ' — TODAY TARGET');
+  setText('today_day_val', fmtTime(todayBillingTarget));
+  setHtml('today_prod_bal', todayBal(prodDiff, false));
+  setHtml('today_aux_bal',  todayBal(auxDiff, true));   // red if exceeded, green if within
+  setHtml('today_bill_bal', todayBal(billDiff, false));
+  setText('today_util_val', todayUtil);
+
+  // Color util green/red
+  const utilEl = document.getElementById('today_util_val');
+  if (utilEl && todayBillingActual > 0) {
+    const pct = tProdToday / todayBillingActual * 100;
+    utilEl.style.color = pct >= 92.95 ? '#1a7a1a' : '#c0392b';
+    utilEl.style.fontWeight = '700';
+  }
+}
+
+// ===== ONBOARDING =====
+let _obWoDays = new Set(['sat', 'sun']); // default selection for onboarding
+
+function openOnboarding() {
+  _obWoDays = new Set([...weekOffDays]);
+  // Sync onboarding pills to current weekOffDays
+  document.querySelectorAll('.ob-wo-pill').forEach(p => {
+    p.classList.toggle('active', _obWoDays.has(p.dataset.day));
+    p.onclick = function() { toggleObPill(this); };
+  });
+  document.getElementById('onboardingModal').classList.add('open');
+}
+
+function toggleObPill(pill) {
+  const day = pill.dataset.day;
+  if (_obWoDays.has(day)) {
+    _obWoDays.delete(day);
+    pill.classList.remove('active');
+  } else {
+    if (_obWoDays.size >= 2) {
+      const first = [..._obWoDays][0];
+      _obWoDays.delete(first);
+      document.querySelector(`.ob-wo-pill[data-day="${first}"]`).classList.remove('active');
+    }
+    _obWoDays.add(day);
+    pill.classList.add('active');
+  }
+}
+
+function saveOnboarding() {
+  const prod  = parseInt(document.getElementById('ob-prod').value)  || 0;
+  const coach = parseInt(document.getElementById('ob-coach').value) || 0;
+  const meet  = parseInt(document.getElementById('ob-meet').value)  || 0;
+  const well  = parseInt(document.getElementById('ob-well').value)  || 0;
+  const jobs  = parseInt(document.getElementById('ob-jobs').value)  || 0;
+  const until = document.getElementById('ob-until').value;
+  const err   = document.getElementById('ob-err');
+
+  if (prod <= 0) { err.textContent = 'Please enter a valid Production target.'; return; }
+  err.textContent = '';
+
+  // Apply billing targets
+  document.getElementById('q_prod').value  = prod;
+  document.getElementById('q_coach').value = coach;
+  document.getElementById('q_meet').value  = meet;
+  document.getElementById('q_well').value  = well;
+  document.getElementById('q_jobs').value  = jobs;
+
+  // Apply weekoff days
+  weekOffDays = new Set(_obWoDays);
+  weekOffUntil = until ? new Date(until) : null;
+  document.querySelectorAll('.wo-pill').forEach(p => {
+    p.classList.toggle('active', weekOffDays.has(p.dataset.day));
+  });
+  updateWorkingDayRows();
+  saveWeekOffSettings();
+  // Apply WO to attendance calendar up to until date
+  try { applyWeekOffUpToToday(); } catch(e) {}
+
+  document.getElementById('onboardingModal').classList.remove('open');
+  window.saveUserData();
+  if (window.recalc) window.recalc();
+}
+
+// ===== DELETE ACCOUNT =====
+function openDeleteAccountModal() {
+  document.getElementById('del-password').value = '';
+  document.getElementById('del-err').textContent = '';
+  document.getElementById('del-confirm-btn').disabled = true;
+  document.getElementById('deleteAccountModal').classList.add('open');
+}
+
+function closeDeleteAccountModal() {
+  document.getElementById('deleteAccountModal').classList.remove('open');
+}
+
+function checkDelReady() {
+  const pw = document.getElementById('del-password').value;
+  document.getElementById('del-confirm-btn').disabled = pw.length < 1;
+}
+
+function exportDbBeforeDelete() {
+  // Reuse the existing PDF export or just open print dialog with db entries
+  if (!dbEntries.length) { alert('No database entries to export.'); return; }
+  const win = window.open('', '_blank');
+  let html = `<html><head><title>WorkPlace DB Export</title>
+  <style>body{font-family:Arial,sans-serif;font-size:10px;padding:20px;}
+  h2{color:#1C2B3A;margin-bottom:16px;}
+  .entry{margin-bottom:24px;page-break-inside:avoid;}
+  .entry-header{background:#1C2B3A;color:#fff;padding:6px 10px;font-weight:700;font-size:9px;}
+  table{width:100%;border-collapse:collapse;margin-top:4px;}
+  th{background:#DDE4EC;padding:4px 6px;font-size:8px;border:1px solid #bbb;}
+  td{padding:3px 6px;font-size:8px;border:1px solid #ccc;}
+  .total{background:#e8f0fe;font-weight:700;}
+  .balance{background:#fff3cd;font-weight:700;}
+  </style></head><body><h2>📊 WorkPlace — Database Export</h2>`;
+  dbEntries.forEach(e => {
+    const acc = e.accuracy;
+    html += `<div class="entry"><div class="entry-header">📅 ${e.week} | Pushed: ${e.pushedAt}${acc ? ` | 🎯 Accuracy: ${acc.accPct}% | Error Rate: ${acc.errPct}%` : ''}</div>
+    <table><tr><th>DAY</th><th>PROD</th><th>COACH</th><th>MEET</th><th>WELL</th><th>BREAK</th><th>UNAVAIL</th><th>AUX</th><th>UTIL</th><th>JOBS</th><th>BILLING</th></tr>`;
+    e.rows.forEach(r => {
+      const cls = r.type === 'total' ? 'total' : r.type === 'balance' ? 'balance' : '';
+      html += `<tr class="${cls}"><td><b>${r.label}</b></td><td>${r.prod}</td><td>${r.coach}</td><td>${r.meet}</td><td>${r.well}</td><td>${r.brk}</td><td>${r.unavail}</td><td>${r.aux}</td><td>${r.util}</td><td>${r.jobs}</td><td>${r.billing}</td></tr>`;
+    });
+    html += `</table></div>`;
+  });
+  html += `</body></html>`;
+  win.document.write(html);
+  win.document.close();
+  win.print();
+}
+
+async function confirmDeleteAccount() {
+  const password = document.getElementById('del-password').value;
+  const errEl = document.getElementById('del-err');
+  const btn = document.getElementById('del-confirm-btn');
+  errEl.textContent = ''; btn.disabled = true; btn.textContent = 'Deleting...';
+
+  try {
+    const { EmailAuthProvider, reauthenticateWithCredential, deleteUser } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const user = window._fbAuth.currentUser;
+    if (!user) throw new Error('Not logged in');
+
+    // Re-authenticate first
+    const cred = EmailAuthProvider.credential(user.email, password);
+    await reauthenticateWithCredential(user, cred);
+
+    // Delete Firestore docs
+    try {
+      await window._fbFns.setDoc(window._fbFns.doc(window._fbDb, 'userData', user.uid), {});
+      await window._fbFns.setDoc(window._fbFns.doc(window._fbDb, 'users', user.uid), {});
+    } catch(e) {}
+
+    // Clear scoped localStorage
+    ['att_data','att_processed_weeks','db_snapshots','weekoff_settings'].forEach(k => {
+      localStorage.removeItem(lsKey(k));
+    });
+
+    // Delete Firebase Auth user
+    await deleteUser(user);
+    closeDeleteAccountModal();
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'DELETE ACCOUNT';
+    const msgs = { 'auth/wrong-password': 'Incorrect password.', 'auth/invalid-credential': 'Incorrect password.', 'auth/requires-recent-login': 'Please log out and log back in before deleting.' };
+    errEl.textContent = msgs[e.code] || e.message;
+  }
 }
 
 // ===== RESET ALL FIELDS =====
@@ -1684,7 +2131,40 @@ function copyData(type) {
 // All 7 days of the week starting Saturday (corporate week Sat-Fri)
 const ALL_DAYS_ORDER = ['sat','sun','mon','tue','wed','thu','fri'];
 const ALL_DAY_NAMES  = ['SATURDAY','SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'];
-let weekOffDays = new Set(['sat']); // default: Sat off (Fri-Sat)
+let weekOffDays = new Set(['sat']); // default: Sat off
+let weekOffUntil = null; // Date object — weekoffs auto-applied only up to this date
+
+// UID-scoped localStorage helpers — prevents cross-account data leakage
+let _currentUid = null;
+function lsKey(key) { return _currentUid ? `${_currentUid}_${key}` : key; }
+function lsGet(key, def) { try { return JSON.parse(localStorage.getItem(lsKey(key)) || def); } catch(e) { return JSON.parse(def); } }
+function lsSet(key, val) { localStorage.setItem(lsKey(key), JSON.stringify(val)); }
+
+// Call on login to init uid-scoped storage
+function initUserStorage(uid) {
+  _currentUid = uid;
+  // Re-init attData and dbEntries from this user's scoped keys
+  attData = lsGet('att_data', '{}');
+  dbEntries = lsGet('db_snapshots', '[]');
+  // Load weekoff settings
+  const wo = lsGet('weekoff_settings', 'null');
+  if (wo) {
+    weekOffDays = new Set(wo.days || ['sat']);
+    weekOffUntil = wo.until ? new Date(wo.until) : null;
+    // Sync pills UI
+    document.querySelectorAll('.wo-pill').forEach(p => {
+      p.classList.toggle('active', weekOffDays.has(p.dataset.day));
+    });
+    updateWorkingDayRows();
+  }
+}
+
+function saveWeekOffSettings() {
+  lsSet('weekoff_settings', {
+    days: [...weekOffDays],
+    until: weekOffUntil ? weekOffUntil.toISOString().split('T')[0] : null
+  });
+}
 
 function toggleWeekOff(pill) {
   const day = pill.dataset.day;
@@ -1693,7 +2173,6 @@ function toggleWeekOff(pill) {
     pill.classList.remove('active');
   } else {
     if (weekOffDays.size >= 2) {
-      // remove oldest
       const first = [...weekOffDays][0];
       weekOffDays.delete(first);
       document.querySelector(`.wo-pill[data-day="${first}"]`).classList.remove('active');
@@ -1703,6 +2182,9 @@ function toggleWeekOff(pill) {
   }
   updateWorkingDayRows();
   recalc();
+  saveWeekOffSettings();
+  // Apply the new weekoff pattern to the current week in attendance
+  applyWeekOffToWeek(new Date());
 }
 
 function updateWorkingDayRows() {
@@ -1728,9 +2210,8 @@ function updateWorkingDayRows() {
       if (label) label.textContent = (rowDayNames[actualDay] || actualDay.toUpperCase());
       rowEl.dataset.actualDay = actualDay;
     }
-    // Update checkbox
+    // Update checkbox — do NOT reset; preserve user's checked state
     const chk = document.getElementById('chk_' + rowId);
-    if (chk) chk.checked = true;
   });
 }
 
@@ -1831,7 +2312,6 @@ async function authSignIn() {
 async function authSignUp() {
   const name = document.getElementById('su-name').value.trim();
   const email = document.getElementById('su-email').value.trim();
-  const mobile = document.getElementById('su-mobile').value.trim();
   const username = document.getElementById('su-username').value.trim();
   const password = document.getElementById('su-password').value;
   const confirm = document.getElementById('su-confirm').value;
@@ -1843,7 +2323,7 @@ async function authSignUp() {
   try {
     const cred = await window._fbFns.createUserWithEmailAndPassword(window._fbAuth, email, password);
     await window._fbFns.updateProfile(cred.user, { displayName: name });
-    await window._fbFns.setDoc(window._fbFns.doc(window._fbDb, 'users', cred.user.uid), { name, email, mobile, username, createdAt: Date.now() });
+    await window._fbFns.setDoc(window._fbFns.doc(window._fbDb, 'users', cred.user.uid), { name, email, username, createdAt: Date.now() });
   } catch(e) {
     const msgs = { 'auth/email-already-in-use': 'Email already registered.', 'auth/invalid-email': 'Invalid email address.', 'auth/weak-password': 'Password too weak.' };
     errEl.textContent = msgs[e.code] || e.message;
@@ -1865,13 +2345,234 @@ async function authForgot() {
 }
 
 // ===== DATABASE TAB =====
-let dbEntries = JSON.parse(localStorage.getItem('db_snapshots') || '[]');
+let dbEntries = [];  // initialized in initUserStorage after login
 
 function showDbTab() {
-  const panel = document.getElementById('dbTabPanel');
-  panel.classList.toggle('open');
-  if (panel.classList.contains('open')) renderDbEntries();
+  const modal = document.getElementById('dbModal');
+  if (modal.classList.contains('open')) {
+    modal.classList.remove('open');
+  } else {
+    modal.classList.add('open');
+    renderDbEntries();
+  }
 }
+
+// ===== ATTENDANCE WEEKOFF HELPERS =====
+const DAY_ABBR_TO_JS = { sat:6, sun:0, mon:1, tue:2, wed:3, thu:4, fri:5 };
+
+function dateToKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
+// Get the Saturday that starts the SAT-FRI week containing `date`
+function getWeekSaturday(date) {
+  const jsDay = date.getDay(); // 0=Sun
+  const posInWeek = {6:0, 0:1, 1:2, 2:3, 3:4, 4:5, 5:6}[jsDay]; // Sat=0
+  const sat = new Date(date);
+  sat.setHours(0,0,0,0);
+  sat.setDate(date.getDate() - posInWeek);
+  return sat;
+}
+
+// Return a unique string key for the week (its Saturday date)
+function getWeekId(date) {
+  const sat = getWeekSaturday(date);
+  return dateToKey(sat);
+}
+
+// Apply the current weekOffDays pattern as WO to the SAT-FRI week containing `date`
+// Only sets WO on days that match weekOffDays; clears WO on days that no longer match
+function applyWeekOffToWeek(date) {
+  const sat = getWeekSaturday(date);
+  const woJsDays = new Set([...weekOffDays].map(d => DAY_ABBR_TO_JS[d]));
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(sat);
+    d.setDate(sat.getDate() + i);
+    const key = dateToKey(d);
+    if (woJsDays.has(d.getDay())) {
+      // Set WO only if cell is empty or already WO (don't overwrite manual leaves)
+      if (!attData[key] || attData[key] === 'WO') {
+        attData[key] = 'WO';
+      }
+    } else {
+      // Remove auto-WO if day is no longer a weekoff day
+      if (attData[key] === 'WO') {
+        delete attData[key];
+      }
+    }
+  }
+  lsSet('att_data', attData);
+  // Track this week as processed
+  const processed = lsGet('att_processed_weeks', '{}');
+  processed[getWeekId(date)] = JSON.stringify([...weekOffDays].sort());
+  lsSet('att_processed_weeks', processed);
+}
+
+// On attendance open: auto-apply WO for all weeks from start of year up to weekOffUntil (or today)
+// that haven't been processed yet, or whose weekoff pattern has changed
+function applyWeekOffUpToToday() {
+  const today = new Date();
+  // Use weekOffUntil as the cutoff if set, otherwise use today
+  const cutoff = weekOffUntil && weekOffUntil >= today ? weekOffUntil : today;
+  const cutoffWeekSat = getWeekSaturday(cutoff);
+  const processed = lsGet('att_processed_weeks', '{}');
+  const currentPattern = JSON.stringify([...weekOffDays].sort());
+
+  // Start from Jan 1 of current year, walk week by week
+  const yearStart = new Date(today.getFullYear(), 0, 1);
+  let cursor = getWeekSaturday(yearStart);
+
+  while (cursor <= cutoffWeekSat) {
+    const weekId = getWeekId(cursor);
+    if (!processed[weekId] || processed[weekId] !== currentPattern) {
+      applyWeekOffToWeek(cursor);
+    }
+    cursor.setDate(cursor.getDate() + 7);
+  }
+}
+
+// ===== ATTENDANCE =====
+let attYear = new Date().getFullYear();
+let attData = {};  // initialized in initUserStorage after login
+let lpTargetKey = null;
+let lpClickCount = {};
+
+const ATT_MONTHS = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+
+function openAttendance() {
+  attYear = new Date().getFullYear();
+  document.getElementById('attYearLabel').textContent = attYear;
+  try { applyWeekOffUpToToday(); } catch(e) { console.warn('Weekoff auto-apply error:', e); }
+  try { renderAttCalendar(); } catch(e) { console.error('Calendar render error:', e); }
+  document.getElementById('attendanceModal').classList.add('open');
+}
+
+function closeAttendance() {
+  document.getElementById('attendanceModal').classList.remove('open');
+  hideLeavePicker();
+}
+
+function attChangeYear(delta) {
+  attYear += delta;
+  document.getElementById('attYearLabel').textContent = attYear;
+  renderAttCalendar();
+}
+
+function renderAttCalendar() {
+  const table = document.getElementById('attCalendarTable');
+
+  // SAT=0, SUN=1, MON=2, TUE=3, WED=4, THU=5, FRI=6
+  const WEEK_DAYS = ['SAT','SUN','MON','TUE','WED','THU','FRI'];
+
+  // Calculate exact columns needed: furthest column any month reaches
+  const JS_TO_POS = {6:0, 0:1, 1:2, 2:3, 3:4, 4:5, 5:6};
+  let maxLastCol = 0;
+  for (let m = 0; m < 12; m++) {
+    const days = new Date(attYear, m + 1, 0).getDate();
+    const startPos = JS_TO_POS[new Date(attYear, m, 1).getDay()];
+    const lastCol = startPos + days; // last used column index (exclusive)
+    if (lastCol > maxLastCol) maxLastCol = lastCol;
+  }
+  const TOTAL_COLS = maxLastCol;
+  const NUM_WEEKS = Math.ceil(TOTAL_COLS / 7);
+
+  // ── YEAR HEADER ──
+  let html = '<thead>';
+  html += `<tr>`;
+  html += `<th class="att-month-label" style="background:#1C2B3A!important;"></th>`;
+  html += `<th colspan="${TOTAL_COLS}" style="background:#1C2B3A;color:#E8F0F8;font-size:13px;font-weight:900;letter-spacing:3px;padding:5px;text-align:center;">${attYear}</th>`;
+  html += `</tr>`;
+
+  // ── WEEK-DAY HEADER ──
+  html += `<tr>`;
+  html += `<th class="att-month-label" style="font-size:8px;text-align:center!important;padding-left:0!important;">MONTH/DAY</th>`;
+  for (let i = 0; i < TOTAL_COLS; i++) {
+    const d = i % 7;
+    const isLast = d === 6;
+    html += `<th${isLast ? ' class="week-end-th"' : ''}>${WEEK_DAYS[d]}</th>`;
+  }
+  html += `</tr></thead><tbody>`;
+
+  // ── MONTH ROWS ──
+  for (let m = 0; m < 12; m++) {
+    const daysInMonth = new Date(attYear, m + 1, 0).getDate();
+    const firstJsDay = new Date(attYear, m, 1).getDay();
+    const startPos = JS_TO_POS[firstJsDay];
+
+    const rowClass = m % 2 === 0 ? 'att-row-odd' : 'att-row-even';
+    html += `<tr class="${rowClass}"><td class="att-month-label">${ATT_MONTHS[m]}</td>`;
+
+    let col = 0;
+    let dayNum = 1;
+
+    for (let i = 0; i < TOTAL_COLS; i++) {
+      const isLast = (i % 7) === 6;
+      const weClass = isLast ? ' week-end' : '';
+
+      if (i < startPos || dayNum > daysInMonth) {
+        // Empty slot
+        html += `<td class="att-cell empty${weClass}"></td>`;
+      } else {
+        const d = dayNum;
+        const key = `${attYear}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const leave = attData[key];
+        const cls = `att-cell${leave ? ' att-'+leave : ''}${weClass}`;
+        html += `<td class="${cls}" data-key="${key}" onclick="attCellClick(event,this)" title="${key}">${leave || d}</td>`;
+        dayNum++;
+      }
+    }
+    html += `</tr>`;
+  }
+
+  html += `</tbody>`;
+  table.innerHTML = html;
+}
+
+function attCellClick(e, cell) {
+  if (cell.classList.contains('empty')) return;
+  const key = cell.dataset.key;
+  lpClickCount[key] = (lpClickCount[key] || 0) + 1;
+  if (lpClickCount[key] === 1) {
+    setTimeout(() => { lpClickCount[key] = 0; }, 400);
+    return;
+  }
+  lpClickCount[key] = 0;
+  lpTargetKey = key;
+  const mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const [yr, mo, dy] = key.split('-');
+  document.getElementById('lpDateLabel').textContent = `${dy} ${mNames[parseInt(mo)-1]} ${yr}`;
+  const picker = document.getElementById('leavePicker');
+  picker.style.display = 'block';
+  const rect = cell.getBoundingClientRect();
+  let left = rect.left + window.scrollX;
+  let top = rect.bottom + window.scrollY + 4;
+  if (left + 200 > window.innerWidth) left = window.innerWidth - 205;
+  picker.style.left = left + 'px';
+  picker.style.top = top + 'px';
+  e.stopPropagation();
+}
+
+function setLeave(type) {
+  if (!lpTargetKey) return;
+  if (type === null) delete attData[lpTargetKey];
+  else attData[lpTargetKey] = type;
+  lsSet('att_data', attData);
+  hideLeavePicker();
+  renderAttCalendar();
+}
+
+function hideLeavePicker() {
+  document.getElementById('leavePicker').style.display = 'none';
+  lpTargetKey = null;
+}
+
+document.addEventListener('click', function(e) {
+  const picker = document.getElementById('leavePicker');
+  if (picker && picker.style.display === 'block' && !picker.contains(e.target)) {
+    hideLeavePicker();
+  }
+});
+
 
 function pushToDatabase() {
   // Step 1: show confirmation modal
@@ -1884,19 +2585,31 @@ function closePushConfirm() {
   document.getElementById('pushConfirmModal').classList.remove('open');
 }
 
-function openAccuracyModal() {
+let _editAccuracyIdx = null; // null = new push, number = editing existing entry
+
+function openAccuracyModal(editIdx) {
+  _editAccuracyIdx = (editIdx !== undefined) ? editIdx : null;
   closePushConfirm();
   // reset accuracy fields
-  document.getElementById('acc-sample').value = '';
-  document.getElementById('acc-errors').value = '';
-  document.getElementById('accResultBox').style.display = 'none';
-  document.getElementById('accSaveBtn').disabled = true;
-  document.getElementById('accSaveBtn').style.opacity = '0.4';
+  if (_editAccuracyIdx !== null && dbEntries[_editAccuracyIdx]?.accuracy) {
+    const acc = dbEntries[_editAccuracyIdx].accuracy;
+    document.getElementById('acc-sample').value = acc.sample || '';
+    document.getElementById('acc-errors').value = acc.errors || '';
+    calcAccuracy();
+  } else {
+    document.getElementById('acc-sample').value = '';
+    document.getElementById('acc-errors').value = '';
+    document.getElementById('accResultBox').style.display = 'none';
+  }
+  // Always enable save button (user can skip accuracy)
+  document.getElementById('accSaveBtn').disabled = false;
+  document.getElementById('accSaveBtn').style.opacity = '1';
   document.getElementById('accuracyModal').classList.add('open');
 }
 
 function closeAccuracyModal() {
   document.getElementById('accuracyModal').classList.remove('open');
+  _editAccuracyIdx = null;
 }
 
 function calcAccuracy() {
@@ -1907,35 +2620,44 @@ function calcAccuracy() {
 
   if (sample > 0 && errors >= 0 && errors <= sample) {
     const correct = sample - errors;
-    const accRatio = correct / sample;
-    const accPct = accRatio * 100;
+    const accPct = (correct / sample) * 100;
     const errPct = 100 - accPct;
-
     const accDisplay = document.getElementById('accValueDisplay');
     const errDisplay = document.getElementById('errValueDisplay');
-
     accDisplay.textContent = accPct.toFixed(2) + '%';
     accDisplay.className = accPct >= 98 ? 'acc-value-green' : 'acc-value-red';
     errDisplay.textContent = errPct.toFixed(2) + '%';
-
     box.style.display = 'block';
-    saveBtn.disabled = false;
-    saveBtn.style.opacity = '1';
   } else {
     box.style.display = 'none';
-    saveBtn.disabled = true;
-    saveBtn.style.opacity = '0.4';
   }
+  // Always keep save enabled — accuracy is optional
+  saveBtn.disabled = false;
+  saveBtn.style.opacity = '1';
 }
 
 function confirmPushToDatabase() {
   const sample = parseInt(document.getElementById('acc-sample').value) || 0;
   const errors = parseInt(document.getElementById('acc-errors').value) || 0;
-  const correct = sample - errors;
-  const accPct = sample > 0 ? (correct / sample * 100).toFixed(2) : '–';
-  const errPct = sample > 0 ? (100 - parseFloat(accPct)).toFixed(2) : '–';
+  const hasData = sample > 0 && errors >= 0 && errors <= sample;
+  const accuracy = hasData ? {
+    sample, errors,
+    accPct: ((sample - errors) / sample * 100).toFixed(2),
+    errPct: (100 - ((sample - errors) / sample * 100)).toFixed(2)
+  } : null;
+
   closeAccuracyModal();
-  _doPushToDatabase({ sample, errors, accPct, errPct });
+
+  if (_editAccuracyIdx !== null) {
+    // Editing existing entry accuracy
+    dbEntries[_editAccuracyIdx].accuracy = accuracy;
+    lsSet('db_snapshots', dbEntries);
+    renderDbEntries();
+    _editAccuracyIdx = null;
+  } else {
+    // New push
+    _doPushToDatabase(accuracy);
+  }
 }
 
 function _doPushToDatabase(accuracy) {
@@ -2011,7 +2733,7 @@ function _doPushToDatabase(accuracy) {
   const weekLabel = document.getElementById('weekLabelBar')?.textContent || '–';
   const entry = { id: Date.now(), week: weekLabel, pushedAt: new Date().toLocaleString(), accuracy, rows };
   dbEntries.unshift(entry);
-  localStorage.setItem('db_snapshots', JSON.stringify(dbEntries));
+  lsSet('db_snapshots', dbEntries);
 
   // Show db tab
   document.getElementById('dbTabPanel').classList.add('open');
@@ -2028,10 +2750,19 @@ function renderDbEntries() {
     container.innerHTML = '<div class="db-empty">No snapshots yet. Click "Push to Database" to capture the main table.</div>';
     return;
   }
-  container.innerHTML = dbEntries.map((entry, idx) => `
+  container.innerHTML = dbEntries.map((entry, idx) => {
+    const acc = entry.accuracy;
+    let accHtml = '';
+    if (acc && acc.accPct !== '–') {
+      const color = parseFloat(acc.accPct) >= 98 ? '#93C47D' : '#ff8a8a';
+      accHtml = `&nbsp;|&nbsp; 🎯 <span title="Double-click to edit accuracy" ondblclick="openAccuracyModal(${idx})" style="cursor:pointer;padding:1px 5px;border-radius:3px;border:1px dashed #aaa;">Accuracy: <span style="color:${color};font-weight:700;">${acc.accPct}%</span> &nbsp; Error Rate: ${acc.errPct}%</span>`;
+    } else {
+      accHtml = `&nbsp;|&nbsp; <span onclick="openAccuracyModal(${idx})" style="cursor:pointer;color:#f6b26b;font-weight:700;font-size:9px;padding:1px 6px;border:1px dashed #f6b26b;border-radius:3px;">+ ADD ACCURACY</span>`;
+    }
+    return `
     <div class="db-entry">
       <div class="db-entry-header">
-        <span>📅 ${entry.week} &nbsp;|&nbsp; Pushed: ${entry.pushedAt}${entry.accuracy ? ` &nbsp;|&nbsp; 🎯 Accuracy: <span style="color:${parseFloat(entry.accuracy.accPct)>=98?'#93C47D':'#ff8a8a'};font-weight:700;">${entry.accuracy.accPct}%</span> &nbsp; Error Rate: ${entry.accuracy.errPct}%` : ''}</span>
+        <span>📅 ${entry.week} &nbsp;|&nbsp; Pushed: ${entry.pushedAt}${accHtml}</span>
         <span class="db-del" onclick="deleteDbEntry(${idx})" title="Delete">✕</span>
       </div>
       <div style="overflow-x:auto;">
@@ -2051,20 +2782,20 @@ function renderDbEntries() {
             </tr>`).join('')}
         </table>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function deleteDbEntry(idx) {
   dbEntries.splice(idx, 1);
-  localStorage.setItem('db_snapshots', JSON.stringify(dbEntries));
+  lsSet('db_snapshots', dbEntries);
   renderDbEntries();
 }
 
 function clearAllDb() {
   if (!confirm('Delete all snapshots?')) return;
   dbEntries = [];
-  localStorage.setItem('db_snapshots', '[]');
+  lsSet('db_snapshots', []);
   renderDbEntries();
 }
 
@@ -2096,7 +2827,6 @@ async function openSettings() {
     if (snap.exists()) {
       const d = snap.data();
       document.getElementById('set-username').value = d.username || '';
-      document.getElementById('set-mobile').value = d.mobile || '';
     }
   } catch(e) {}
   document.getElementById('settingsModal').classList.add('open');
@@ -2118,13 +2848,12 @@ async function settingsSaveProfile() {
   if (!user) return;
   const name = document.getElementById('set-name').value.trim();
   const username = document.getElementById('set-username').value.trim();
-  const mobile = document.getElementById('set-mobile').value.trim();
   const msg = document.getElementById('set-profile-msg');
   msg.style.color = '#888'; msg.textContent = 'Saving...';
   try {
     await window._fbFns.updateProfile(user, { displayName: name });
     await window._fbFns.setDoc(window._fbFns.doc(window._fbDb, 'users', user.uid),
-      { name, username, mobile, email: user.email, uid: user.uid }, { merge: true });
+      { name, username, email: user.email, uid: user.uid }, { merge: true });
     const nameEl = document.getElementById('topNameSpan');
     if (nameEl) nameEl.textContent = name;
     msg.style.color = '#27ae60'; msg.textContent = '✓ Profile updated!';
@@ -2217,6 +2946,55 @@ function authSignOut() {
 </script>
 </div><!-- end page -->
 
+<!-- ===== ONBOARDING MODAL ===== -->
+<div id="onboardingModal">
+  <div class="onboard-card">
+    <h3>👋 WELCOME TO WORKPLACE</h3>
+    <p>Set your weekly targets & shift to get started. You can update these anytime in Settings.</p>
+    <div class="onboard-row">
+      <label>PRODUCTION (mins/week)</label>
+      <input type="number" id="ob-prod" placeholder="e.g. 2375" min="0">
+      <div class="hint">e.g. 2375 = 39:35 hrs/week</div>
+    </div>
+    <div class="onboard-row">
+      <label>COACHING (mins/week)</label>
+      <input type="number" id="ob-coach" placeholder="e.g. 65" min="0">
+    </div>
+    <div class="onboard-row">
+      <label>MEETING (mins/week)</label>
+      <input type="number" id="ob-meet" placeholder="e.g. 55" min="0">
+    </div>
+    <div class="onboard-row">
+      <label>WELLBEING (mins/week)</label>
+      <input type="number" id="ob-well" placeholder="e.g. 60" min="0">
+    </div>
+    <div class="onboard-row">
+      <label>JOB COUNT TARGET (per day)</label>
+      <input type="number" id="ob-jobs" placeholder="e.g. 350" min="0">
+    </div>
+    <div class="onboard-row">
+      <label>WEEK OFF DAYS <span style="font-weight:400;font-size:8px;color:#888;">(select 2)</span></label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;" id="ob-wo-pills">
+        <span class="ob-wo-pill" data-day="sat">SAT</span>
+        <span class="ob-wo-pill" data-day="sun">SUN</span>
+        <span class="ob-wo-pill" data-day="mon">MON</span>
+        <span class="ob-wo-pill" data-day="tue">TUE</span>
+        <span class="ob-wo-pill" data-day="wed">WED</span>
+        <span class="ob-wo-pill" data-day="thu">THU</span>
+        <span class="ob-wo-pill" data-day="fri">FRI</span>
+      </div>
+      <div class="hint">Double-click to toggle. Max 2 days.</div>
+    </div>
+    <div class="onboard-row">
+      <label>WEEKOFF VALID UNTIL <span style="font-weight:400;font-size:8px;color:#888;">(shift rotation end date)</span></label>
+      <input type="date" id="ob-until" style="font-family:'Lexend',sans-serif;font-size:11px;padding:7px 10px;border:1px solid #1C2B3A;border-radius:4px;width:100%;box-sizing:border-box;">
+      <div class="hint">After this date, weekoff will stop auto-marking. Leave blank for no expiry.</div>
+    </div>
+    <div class="onboard-err" id="ob-err"></div>
+    <button class="onboard-save-btn" onclick="saveOnboarding()">LET'S GO →</button>
+  </div>
+</div>
+
 <!-- ===== SETTINGS MODAL ===== -->
 <div id="settingsModal">
   <div class="settings-card">
@@ -2225,7 +3003,6 @@ function authSignOut() {
     <div class="settings-section">Profile</div>
     <div class="auth-field"><label>Display Name</label><input type="text" id="set-name" placeholder="Full name"></div>
     <div class="auth-field"><label>Username</label><input type="text" id="set-username" placeholder="Username"></div>
-    <div class="auth-field"><label>Mobile</label><input type="tel" id="set-mobile" placeholder="+91 9999999999"></div>
     <button class="auth-btn" onclick="settingsSaveProfile()">SAVE PROFILE</button>
     <div class="settings-save" id="set-profile-msg"></div>
 
@@ -2252,8 +3029,30 @@ function authSignOut() {
     <div class="auth-field"><label>Confirm New Password</label><input type="password" id="set-confirm-pass" placeholder="Repeat new password"></div>
     <button class="auth-btn" onclick="settingsSavePassword()">CHANGE PASSWORD</button>
     <div class="settings-save" id="set-pass-msg"></div>
+
+    <div class="settings-section" style="color:#c0392b;border-color:#c0392b;">⚠ Danger Zone</div>
+    <p style="font-size:9px;color:#888;margin-bottom:10px;">Deleting your account is permanent and cannot be undone.</p>
+    <button class="auth-btn" onclick="openDeleteAccountModal()" style="background:#c0392b;border-color:#c0392b;color:#fff;">DELETE MY ACCOUNT</button>
   </div>
 </div>
+<!-- ===== DELETE ACCOUNT MODAL ===== -->
+<div id="deleteAccountModal">
+  <div class="del-card">
+    <h3>⚠ Delete Account</h3>
+    <p>This permanently deletes your account, all Firestore data, and cannot be undone. You may export your database first.</p>
+    <button class="del-export-btn" onclick="exportDbBeforeDelete()">📥 EXPORT DATABASE AS PDF (Optional)</button>
+    <div class="del-confirm-section">
+      <label>TYPE YOUR PASSWORD TO CONFIRM DELETION</label>
+      <input type="password" id="del-password" placeholder="Enter your password" oninput="checkDelReady()">
+      <div class="del-err" id="del-err"></div>
+    </div>
+    <div class="del-btns">
+      <button class="del-btn-cancel" onclick="closeDeleteAccountModal()">CANCEL</button>
+      <button class="del-btn-delete" id="del-confirm-btn" onclick="confirmDeleteAccount()" disabled>DELETE ACCOUNT</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== PUSH CONFIRM MODAL ===== -->
 <div class="push-modal-overlay" id="pushConfirmModal">
   <div class="push-modal-card">
