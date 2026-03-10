@@ -638,7 +638,72 @@
 }
 
 
-/* ===== DATABASE TAB ===== */
+/* ===== PUSH CONFIRM & ACCURACY MODALS ===== */
+.push-modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); z-index: 9000;
+  align-items: center; justify-content: center;
+  font-family: 'Lexend', sans-serif;
+}
+.push-modal-overlay.open { display: flex; }
+.push-modal-card {
+  background: #fff; border: 1px solid #1C2B3A;
+  box-shadow: 4px 4px 0 #1C2B3A; border-radius: 8px;
+  padding: 28px 30px; width: 360px; max-width: 95vw;
+}
+body.dark .push-modal-card { background: #1a1a1a; border-color: #444; box-shadow: 4px 4px 0 #000; color: #e8e8e8; }
+.push-modal-card h4 {
+  font-size: 13px; font-weight: 700; color: #1C2B3A;
+  margin-bottom: 8px; letter-spacing: 0.4px;
+}
+body.dark .push-modal-card h4 { color: #e8e8e8; }
+.push-modal-card p { font-size: 10px; color: #555; margin-bottom: 18px; line-height: 1.5; }
+body.dark .push-modal-card p { color: #aaa; }
+.push-modal-btns { display: flex; gap: 8px; margin-top: 14px; }
+.push-modal-btns button {
+  flex: 1; padding: 9px; font-family: 'Lexend', sans-serif;
+  font-size: 11px; font-weight: 700; border-radius: 4px;
+  cursor: pointer; border: none; transition: opacity 0.15s;
+}
+.push-modal-btns button:hover { opacity: 0.85; }
+.pmb-yes { background: #1C2B3A; color: #E8F0F8; }
+.pmb-no  { background: transparent; color: #1C2B3A; border: 1px solid #1C2B3A !important; }
+body.dark .pmb-no { color: #e8e8e8; border-color: #555 !important; }
+.push-modal-card .acc-field { margin-bottom: 12px; }
+.push-modal-card .acc-field label {
+  display: block; font-size: 9px; font-weight: 700;
+  color: #1C2B3A; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px;
+}
+body.dark .push-modal-card .acc-field label { color: #aaa; }
+.push-modal-card .acc-field input {
+  width: 100%; padding: 7px 10px; font-family: 'Lexend', sans-serif;
+  font-size: 12px; border: 1px solid #1C2B3A; border-radius: 4px;
+  background: #fff; color: #0D1B26; outline: none;
+}
+body.dark .push-modal-card .acc-field input { background: #2e2e2e; border-color: #555; color: #e8e8e8; }
+.acc-result-box {
+  background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px;
+  padding: 14px 16px; margin-top: 14px; display: none;
+}
+body.dark .acc-result-box { background: #2a2a2a; border-color: #444; }
+.acc-result-title {
+  font-size: 10px; font-weight: 700; color: #1C2B3A;
+  letter-spacing: 0.5px; margin-bottom: 10px; text-align: center;
+  text-transform: uppercase;
+}
+body.dark .acc-result-title { color: #e8e8e8; }
+.acc-result-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; margin-bottom: 6px;
+}
+.acc-dot { font-size: 14px; line-height: 1; }
+.acc-label { color: #333; }
+body.dark .acc-label { color: #ccc; }
+.acc-value-green { color: #1a7a1a; font-size: 13px; }
+.acc-value-red   { color: #c0392b; font-size: 13px; }
+.acc-value-err   { color: #888; font-size: 12px; }
+
+
 #dbTabPanel {
   display: none;
   margin-top: 6px;
@@ -1809,6 +1874,71 @@ function showDbTab() {
 }
 
 function pushToDatabase() {
+  // Step 1: show confirmation modal
+  const weekLabel = document.getElementById('weekLabelBar')?.textContent || 'this week\'s';
+  document.getElementById('confirmWeekLabel').textContent = weekLabel;
+  document.getElementById('pushConfirmModal').classList.add('open');
+}
+
+function closePushConfirm() {
+  document.getElementById('pushConfirmModal').classList.remove('open');
+}
+
+function openAccuracyModal() {
+  closePushConfirm();
+  // reset accuracy fields
+  document.getElementById('acc-sample').value = '';
+  document.getElementById('acc-errors').value = '';
+  document.getElementById('accResultBox').style.display = 'none';
+  document.getElementById('accSaveBtn').disabled = true;
+  document.getElementById('accSaveBtn').style.opacity = '0.4';
+  document.getElementById('accuracyModal').classList.add('open');
+}
+
+function closeAccuracyModal() {
+  document.getElementById('accuracyModal').classList.remove('open');
+}
+
+function calcAccuracy() {
+  const sample = parseInt(document.getElementById('acc-sample').value) || 0;
+  const errors = parseInt(document.getElementById('acc-errors').value) || 0;
+  const box = document.getElementById('accResultBox');
+  const saveBtn = document.getElementById('accSaveBtn');
+
+  if (sample > 0 && errors >= 0 && errors <= sample) {
+    const correct = sample - errors;
+    const accRatio = correct / sample;
+    const accPct = accRatio * 100;
+    const errPct = 100 - accPct;
+
+    const accDisplay = document.getElementById('accValueDisplay');
+    const errDisplay = document.getElementById('errValueDisplay');
+
+    accDisplay.textContent = accPct.toFixed(2) + '%';
+    accDisplay.className = accPct >= 98 ? 'acc-value-green' : 'acc-value-red';
+    errDisplay.textContent = errPct.toFixed(2) + '%';
+
+    box.style.display = 'block';
+    saveBtn.disabled = false;
+    saveBtn.style.opacity = '1';
+  } else {
+    box.style.display = 'none';
+    saveBtn.disabled = true;
+    saveBtn.style.opacity = '0.4';
+  }
+}
+
+function confirmPushToDatabase() {
+  const sample = parseInt(document.getElementById('acc-sample').value) || 0;
+  const errors = parseInt(document.getElementById('acc-errors').value) || 0;
+  const correct = sample - errors;
+  const accPct = sample > 0 ? (correct / sample * 100).toFixed(2) : '–';
+  const errPct = sample > 0 ? (100 - parseFloat(accPct)).toFixed(2) : '–';
+  closeAccuracyModal();
+  _doPushToDatabase({ sample, errors, accPct, errPct });
+}
+
+function _doPushToDatabase(accuracy) {
   const days = ['sun','mon','tue','wed','thu'];
   const dayLabels = { sun:'SUNDAY', mon:'MONDAY', tue:'TUESDAY', wed:'WEDNESDAY', thu:'THURSDAY' };
   const cols = ['PRODUCTION','COACHING','MEETING','WELLBEING','BREAK/LUNCH','UNAVAILABLE','TOTAL AUX','UTILIZATION','JOB COUNT','BILLING'];
@@ -1879,7 +2009,7 @@ function pushToDatabase() {
   });
 
   const weekLabel = document.getElementById('weekLabelBar')?.textContent || '–';
-  const entry = { id: Date.now(), week: weekLabel, pushedAt: new Date().toLocaleString(), rows };
+  const entry = { id: Date.now(), week: weekLabel, pushedAt: new Date().toLocaleString(), accuracy, rows };
   dbEntries.unshift(entry);
   localStorage.setItem('db_snapshots', JSON.stringify(dbEntries));
 
@@ -1901,7 +2031,7 @@ function renderDbEntries() {
   container.innerHTML = dbEntries.map((entry, idx) => `
     <div class="db-entry">
       <div class="db-entry-header">
-        <span>📅 ${entry.week} &nbsp;|&nbsp; Pushed: ${entry.pushedAt}</span>
+        <span>📅 ${entry.week} &nbsp;|&nbsp; Pushed: ${entry.pushedAt}${entry.accuracy ? ` &nbsp;|&nbsp; 🎯 Accuracy: <span style="color:${parseFloat(entry.accuracy.accPct)>=98?'#93C47D':'#ff8a8a'};font-weight:700;">${entry.accuracy.accPct}%</span> &nbsp; Error Rate: ${entry.accuracy.errPct}%` : ''}</span>
         <span class="db-del" onclick="deleteDbEntry(${idx})" title="Delete">✕</span>
       </div>
       <div style="overflow-x:auto;">
@@ -2124,6 +2254,51 @@ function authSignOut() {
     <div class="settings-save" id="set-pass-msg"></div>
   </div>
 </div>
+<!-- ===== PUSH CONFIRM MODAL ===== -->
+<div class="push-modal-overlay" id="pushConfirmModal">
+  <div class="push-modal-card">
+    <h4>📤 Push to Database</h4>
+    <p>Are you sure you want to add <strong id="confirmWeekLabel">this week's</strong> data to the Database?</p>
+    <div class="push-modal-btns">
+      <button class="pmb-no" onclick="closePushConfirm()">CANCEL</button>
+      <button class="pmb-yes" onclick="openAccuracyModal()">YES, CONTINUE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ACCURACY MODAL ===== -->
+<div class="push-modal-overlay" id="accuracyModal">
+  <div class="push-modal-card">
+    <h4>🎯 Accuracy Check</h4>
+    <p>Enter your sample details to calculate accuracy before saving.</p>
+    <div class="acc-field">
+      <label>Sample Size</label>
+      <input type="number" id="acc-sample" placeholder="e.g. 77" min="1" oninput="calcAccuracy()">
+    </div>
+    <div class="acc-field">
+      <label>Errors</label>
+      <input type="number" id="acc-errors" placeholder="e.g. 3" min="0" oninput="calcAccuracy()">
+    </div>
+    <div class="acc-result-box" id="accResultBox">
+      <div class="acc-result-title">— Summary of Results —</div>
+      <div class="acc-result-row">
+        <span class="acc-dot">•</span>
+        <span class="acc-label">Accuracy:</span>
+        <span id="accValueDisplay" class="acc-value-green">–</span>
+      </div>
+      <div class="acc-result-row">
+        <span class="acc-dot">•</span>
+        <span class="acc-label">Error Rate:</span>
+        <span id="errValueDisplay" class="acc-value-err">–</span>
+      </div>
+    </div>
+    <div class="push-modal-btns">
+      <button class="pmb-no" onclick="closeAccuracyModal()">BACK</button>
+      <button class="pmb-yes" id="accSaveBtn" onclick="confirmPushToDatabase()" disabled style="opacity:0.4;">SAVE TO DB</button>
+    </div>
+  </div>
+</div>
+
 <!-- Hidden billing/count inputs (managed via Settings → Billing & Count) -->
 <div style="display:none;">
   <input type="number" id="q_prod" value="2375" min="0" onchange="recalc()">
