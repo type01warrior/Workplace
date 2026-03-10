@@ -238,11 +238,11 @@
   }
   .wo-pill.active {
     background: #1C2B3A;
-    color: #000;
+    color: #ffffff;
     border-color: #c0392b;
   }
   body.dark .wo-pill { background: #333; color: #aaa; border-color: #555; }
-  body.dark .wo-pill.active { background: #c0392b; color: #000; }
+  body.dark .wo-pill.active { background: #c0392b; color: #ffffff; }
 
   /* ===== MAIN TABLE ===== */ */
   .main-section { margin-bottom: 6px; }
@@ -1167,17 +1167,6 @@ body.dark .db-entry { border-color: #333; }
     </table></div>
   </div>
 
-  <div class="fg-cell">
-    <div class="tcard tcard-compact"><table>
-      <tr><td class="bg-red left">DAY/AUX</td><td class="bg-red">MINS</td></tr>
-      <tr><td class="left">PRODUCTION</td><td class="input-cell bg-gray" style="padding:0;"><input type="number" id="q_prod" value="2375" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()"></td></tr>
-      <tr><td class="left">COACHING</td><td class="input-cell bg-gray" style="padding:0;"><input type="number" id="q_coach" value="65" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()"></td></tr>
-      <tr><td class="left">MEETING</td><td class="input-cell bg-gray" style="padding:0;"><input type="number" id="q_meet" value="55" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()"></td></tr>
-      <tr><td class="left">WELLBEING</td><td class="input-cell bg-gray" style="padding:0;"><input type="number" id="q_well" value="60" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()"></td></tr>
-      <tr><td class="left">JOB COUNT</td><td class="input-cell bg-gray" style="padding:0;"><input type="number" id="q_jobs" value="1750" min="0" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()"></td></tr>
-      <tr><td class="left">TOTALS</td><td id="q_total">–</td></tr>
-    </table></div>
-  </div>
 
 </div><!-- end panels -->
 
@@ -1343,7 +1332,7 @@ function recalc() {
     const un = getInputMins('unavail_' + d);
     const jobs = parseInt(document.getElementById('jobs_' + d)?.value || 0);
     const aux = coach + meet + well + brk + un;
-    const billing = prod + aux;
+    const billing = prod + coach + meet + well;
     const util = billing > 0 ? prod / billing : null;
 
     setText('aux_' + d, fmtTime(aux));
@@ -1362,7 +1351,7 @@ function recalc() {
   });
 
   const totAux = totCoach + totMeet + totWell + totBreak + totUnavail;
-  const totBilling = totProd + totAux;
+  const totBilling = totProd + totCoach + totMeet + totWell;
   const totUtil = totBilling > 0 ? totProd / totBilling : null;
 
   setText('tot_prod', fmtTime(totProd));
@@ -1541,7 +1530,7 @@ function resetAllFields() {
 
 // ===== COPY DAILY/WEEKLY =====
 function copyDW(type) {
-  const week = document.getElementById('dw_week_daily')?.textContent || '–';
+  const week = getWeekLabel();
   const pad = (s, n=14) => s.padEnd(n);
   let text = '';
   if (type === 'daily') {
@@ -1585,7 +1574,7 @@ function copyDW(type) {
 
 // ===== COPY DATA =====
 function copyData(type) {
-  const week = document.getElementById('p2_week')?.textContent || '–';
+  const week = getWeekLabel();
   const pad = (s, n=14) => s.padEnd(n);
   let text = '';
   if (type === 'achieved') {
@@ -1983,6 +1972,12 @@ async function openSettings() {
     }
   } catch(e) {}
   document.getElementById('settingsModal').classList.add('open');
+  // Pre-fill billing & count
+  document.getElementById('set-q-prod').value  = document.getElementById('q_prod').value;
+  document.getElementById('set-q-coach').value = document.getElementById('q_coach').value;
+  document.getElementById('set-q-meet').value  = document.getElementById('q_meet').value;
+  document.getElementById('set-q-well').value  = document.getElementById('q_well').value;
+  document.getElementById('set-q-jobs').value  = document.getElementById('q_jobs').value;
 }
 
 function closeSettings() {
@@ -2052,6 +2047,41 @@ async function settingsSavePassword() {
   }
 }
 
+function settingsSaveBilling() {
+  const msg = document.getElementById('set-billing-msg');
+  const fields = [
+    ['q_prod','set-q-prod'],['q_coach','set-q-coach'],
+    ['q_meet','set-q-meet'],['q_well','set-q-well'],['q_jobs','set-q-jobs']
+  ];
+  fields.forEach(([hiddenId, setId]) => {
+    const val = document.getElementById(setId).value;
+    if (val !== '') document.getElementById(hiddenId).value = val;
+  });
+  recalc();
+  window.saveUserData();
+  msg.style.color = '#27ae60';
+  msg.textContent = '✓ Billing & Count saved!';
+  setTimeout(() => msg.textContent = '', 2500);
+}
+
+function settingsResetBilling() {
+  const defaults = {
+    'q_prod':2375,'q_coach':65,'q_meet':55,'q_well':60,'q_jobs':1750
+  };
+  Object.entries(defaults).forEach(([id, val]) => {
+    document.getElementById(id).value = val;
+    const setId = 'set-' + id.replace('_','-');
+    const el = document.getElementById(setId);
+    if (el) el.value = val;
+  });
+  recalc();
+  window.saveUserData();
+  const msg = document.getElementById('set-billing-msg');
+  msg.style.color = '#888';
+  msg.textContent = '✓ Reset to defaults!';
+  setTimeout(() => msg.textContent = '', 2500);
+}
+
 function authSignOut() {
   window.saveUserData().then(() => window._fbFns.signOut(window._fbAuth));
 }
@@ -2071,6 +2101,17 @@ function authSignOut() {
     <button class="auth-btn" onclick="settingsSaveProfile()">SAVE PROFILE</button>
     <div class="settings-save" id="set-profile-msg"></div>
 
+    <div class="settings-section">Billing &amp; Count</div>
+    <p style="font-size:9px;color:#888;margin-bottom:10px;">Weekly target minutes used for billing calculations. Defaults reset on page load.</p>
+    <div class="auth-field"><label>Production (mins)</label><input type="number" id="set-q-prod" placeholder="2375" min="0"></div>
+    <div class="auth-field"><label>Coaching (mins)</label><input type="number" id="set-q-coach" placeholder="65" min="0"></div>
+    <div class="auth-field"><label>Meeting (mins)</label><input type="number" id="set-q-meet" placeholder="55" min="0"></div>
+    <div class="auth-field"><label>Wellbeing (mins)</label><input type="number" id="set-q-well" placeholder="60" min="0"></div>
+    <div class="auth-field"><label>Job Count Target</label><input type="number" id="set-q-jobs" placeholder="1750" min="0"></div>
+    <button class="auth-btn" onclick="settingsSaveBilling()">SAVE BILLING &amp; COUNT</button>
+    <button class="auth-btn secondary" onclick="settingsResetBilling()">RESET TO DEFAULTS</button>
+    <div class="settings-save" id="set-billing-msg"></div>
+
     <div class="settings-section">Change Email</div>
     <div class="auth-field"><label>New Email</label><input type="email" id="set-email" placeholder="new@email.com"></div>
     <div class="auth-field"><label>Current Password</label><input type="password" id="set-email-pass" placeholder="Verify password"></div>
@@ -2085,6 +2126,15 @@ function authSignOut() {
     <div class="settings-save" id="set-pass-msg"></div>
   </div>
 </div>
+<!-- Hidden billing/count inputs (managed via Settings → Billing & Count) -->
+<div style="display:none;">
+  <input type="number" id="q_prod" value="2375" min="0" onchange="recalc()">
+  <input type="number" id="q_coach" value="65" min="0" onchange="recalc()">
+  <input type="number" id="q_meet" value="55" min="0" onchange="recalc()">
+  <input type="number" id="q_well" value="60" min="0" onchange="recalc()">
+  <input type="number" id="q_jobs" value="1750" min="0" onchange="recalc()">
+</div>
+
 </div><!-- end mainApp -->
 </body>
 </html>
