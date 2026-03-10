@@ -1421,7 +1421,8 @@ function recalc() {
   if (balUtil !== null) setText('bal_util', (balUtil * 100).toFixed(2) + '%');
   else setText('bal_util', '–');
 
-  const targetJobs = parseInt(document.getElementById('q_jobs')?.value || 1750);
+  const jobsPerDay = parseInt(document.getElementById('q_jobs')?.value || 350);
+  const targetJobs = jobsPerDay * numDays;
   setText('target_jobs', targetJobs);
   // tot_jobs = sum of checked daily jobs; bal_jobs = target - sum
   setText('tot_jobs', totJobs);
@@ -2063,7 +2064,7 @@ function settingsSaveBilling() {
 
 function settingsResetBilling() {
   const defaults = {
-    'q_prod':2375,'q_coach':65,'q_meet':55,'q_well':60,'q_jobs':1750
+    'q_prod':2375,'q_coach':65,'q_meet':55,'q_well':60,'q_jobs':350
   };
   Object.entries(defaults).forEach(([id, val]) => {
     document.getElementById(id).value = val;
@@ -2104,7 +2105,7 @@ function authSignOut() {
     <div class="auth-field"><label>Coaching (mins)</label><input type="number" id="set-q-coach" placeholder="65" min="0"></div>
     <div class="auth-field"><label>Meeting (mins)</label><input type="number" id="set-q-meet" placeholder="55" min="0"></div>
     <div class="auth-field"><label>Wellbeing (mins)</label><input type="number" id="set-q-well" placeholder="60" min="0"></div>
-    <div class="auth-field"><label>Job Count Target</label><input type="number" id="set-q-jobs" placeholder="1750" min="0"></div>
+    <div class="auth-field"><label>Job Count Target / Day</label><input type="number" id="set-q-jobs" placeholder="350" min="0"></div>
     <button class="auth-btn" onclick="settingsSaveBilling()">SAVE BILLING &amp; COUNT</button>
     <button class="auth-btn secondary" onclick="settingsResetBilling()">RESET TO DEFAULTS</button>
     <div class="settings-save" id="set-billing-msg"></div>
@@ -2129,7 +2130,7 @@ function authSignOut() {
   <input type="number" id="q_coach" value="65" min="0" onchange="recalc()">
   <input type="number" id="q_meet" value="55" min="0" onchange="recalc()">
   <input type="number" id="q_well" value="60" min="0" onchange="recalc()">
-  <input type="number" id="q_jobs" value="1750" min="0" onchange="recalc()">
+  <input type="number" id="q_jobs" value="350" min="0" onchange="recalc()">
 </div>
 
 </div><!-- end mainApp -->
