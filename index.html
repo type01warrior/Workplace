@@ -504,6 +504,463 @@
     }
     .copy-btn-row button { font-size: 9px !important; padding: 6px 4px !important; }
   }
+
+  /* ══════════════════════════════════════════
+     DE-EXCEL UI REFRESH
+  ══════════════════════════════════════════ */
+
+  /* Kill the grid – only horizontal lines */
+  td, th {
+    border: none !important;
+    border-bottom: 1px solid #e8edf2 !important;
+    padding: 7px 10px !important;
+    font-size: 11px !important;
+  }
+  body.dark td, body.dark th {
+    border-bottom-color: #232d38 !important;
+  }
+  /* Stronger separator under header */
+  thead tr td, thead tr th {
+    border-bottom: 2px solid #1C2B3A !important;
+    padding: 9px 10px !important;
+  }
+  body.dark thead tr td, body.dark thead tr th {
+    border-bottom-color: #3a5068 !important;
+  }
+
+  /* Header cells – minimal, dark, label-style */
+  thead tr td.bg-red, thead tr th.bg-red {
+    background: #1C2B3A !important;
+    color: #7a9ab8 !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.9px !important;
+    text-transform: uppercase !important;
+  }
+  body.dark thead tr td.bg-red, body.dark thead tr th.bg-red {
+    background: #111b25 !important;
+    color: #5a7a98 !important;
+  }
+
+  /* ── Data rows: no fill, soft hover ── */
+  tr.bg-gray td { background-color: transparent !important; }
+  body.dark tr.bg-gray td {
+    background-color: transparent !important;
+    color: #c8d8e8 !important;
+  }
+  .tcard tbody tr:not(.total-used):not(.total-balance):not(.bg-blue) {
+    transition: background 0.13s;
+  }
+  .tcard tbody tr:not(.total-used):not(.total-balance):not(.bg-blue):hover td {
+    background-color: #f4f7fb !important;
+  }
+  body.dark .tcard tbody tr:not(.total-used):not(.total-balance):not(.bg-blue):hover td {
+    background-color: #1a2530 !important;
+  }
+
+  /* Day label left-accent on hover */
+  tr.bg-gray td.left {
+    font-weight: 700;
+    font-size: 11px;
+    color: #1C2B3A;
+    padding-left: 14px !important;
+    border-left: 3px solid transparent !important;
+    border-bottom: 1px solid #e8edf2 !important;
+    transition: border-color 0.15s;
+  }
+  tr.bg-gray:hover td.left { border-left-color: #E06666 !important; }
+  body.dark tr.bg-gray td.left {
+    color: #c8d8e8 !important;
+    border-bottom-color: #232d38 !important;
+  }
+  body.dark tr.bg-gray:hover td.left { border-left-color: #c0392b !important; }
+
+  /* ── Target row (blue) ── */
+  tr.bg-blue td {
+    background: #f0f6fc !important;
+    color: #1C2B3A !important;
+    border-bottom: 2px solid #6FA8DC !important;
+    font-weight: 700 !important;
+  }
+  tr.bg-blue td.left {
+    border-left: 3px solid #6FA8DC !important;
+    color: #1C2B3A !important;
+  }
+  body.dark tr.bg-blue td {
+    background: #111e2b !important;
+    color: #8ab8d8 !important;
+    border-bottom-color: #1a6ea8 !important;
+  }
+  body.dark tr.bg-blue td.left { border-left-color: #1a6ea8 !important; }
+
+  /* ── Total Used row ── */
+  tr.total-used td {
+    background: #e4f0fb !important;
+    color: #0d1f30 !important;
+    font-weight: 700 !important;
+    border-top: 2px solid #6FA8DC !important;
+    border-bottom: 1px solid #b8d4ee !important;
+  }
+  tr.total-used td.left { border-left: 3px solid #6FA8DC !important; padding-left: 14px !important; }
+  body.dark tr.total-used td {
+    background: #111e2b !important;
+    color: #7ab4d8 !important;
+    border-top-color: #1a6ea8 !important;
+    border-bottom-color: #1a3a5a !important;
+  }
+
+  /* ── Total Balance row ── */
+  tr.total-balance td {
+    background: #1C2B3A !important;
+    color: #E8F0F8 !important;
+    border-bottom: none !important;
+    font-weight: 700 !important;
+  }
+  tr.total-balance td.left {
+    border-left: 3px solid #E06666 !important;
+    padding-left: 14px !important;
+    color: #fff !important;
+  }
+  body.dark tr.total-balance td { background: #0d1822 !important; }
+
+  /* ── Input cells: transparent, pill inputs ── */
+  td.input-cell {
+    background: transparent !important;
+    padding: 4px 6px !important;
+  }
+  td.input-cell input {
+    background: transparent !important;
+    color: var(--text) !important;
+  }
+  body.dark td.input-cell input { color: #c8d8e8 !important; }
+
+  input.dur {
+    background: transparent !important;
+    border: 1.5px solid #ccd6e0 !important;
+    border-radius: 7px !important;
+    padding: 4px 6px !important;
+    font-size: 11px !important;
+    letter-spacing: 0.5px !important;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s !important;
+    color: #1C2B3A !important;
+  }
+  input.dur:focus {
+    background: #fff !important;
+    border-color: #6FA8DC !important;
+    box-shadow: 0 0 0 3px rgba(111,168,220,0.18) !important;
+    outline: none !important;
+    color: #1C2B3A !important;
+  }
+  input.dur.invalid {
+    border-color: #E06666 !important;
+    box-shadow: 0 0 0 3px rgba(224,102,102,0.15) !important;
+    color: #c0392b !important;
+  }
+  body.dark input.dur {
+    border-color: #2e4a62 !important;
+    color: #c8d8e8 !important;
+  }
+  body.dark input.dur:focus {
+    background: #1a2838 !important;
+    border-color: #6FA8DC !important;
+    color: #e8f0f8 !important;
+  }
+
+  /* jobs input in table */
+  td.input-cell input[type="number"] {
+    border: 1.5px solid #ccd6e0 !important;
+    border-radius: 7px !important;
+    padding: 4px 4px !important;
+    font-size: 11px !important;
+    background: transparent !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+  }
+  td.input-cell input[type="number"]:focus {
+    background: #fff !important;
+    border-color: #6FA8DC !important;
+    box-shadow: 0 0 0 3px rgba(111,168,220,0.18) !important;
+  }
+  body.dark td.input-cell input[type="number"] {
+    border-color: #2e4a62 !important;
+    color: #c8d8e8 !important;
+  }
+  body.dark td.input-cell input[type="number"]:focus {
+    background: #1a2838 !important;
+  }
+
+  /* ── Custom checkbox toggle ── */
+  input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 34px !important;
+    height: 19px !important;
+    border-radius: 10px !important;
+    background: #dde4ec !important;
+    border: 1.5px solid #b8c8d8 !important;
+    cursor: pointer !important;
+    position: relative !important;
+    transition: background 0.2s, border-color 0.2s !important;
+    flex-shrink: 0;
+    vertical-align: middle;
+  }
+  input[type="checkbox"]::after {
+    content: '';
+    position: absolute;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: white;
+    top: 2px;
+    left: 2px;
+    transition: left 0.2s, background 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+  input[type="checkbox"]:checked {
+    background: #1C2B3A !important;
+    border-color: #1C2B3A !important;
+  }
+  input[type="checkbox"]:checked::after { left: 17px; }
+  body.dark input[type="checkbox"] {
+    background: #2a3a4a !important;
+    border-color: #3a5068 !important;
+  }
+  body.dark input[type="checkbox"]:checked {
+    background: #6FA8DC !important;
+    border-color: #6FA8DC !important;
+  }
+  body.dark input[type="checkbox"]:checked::after { background: #fff; }
+
+  /* ── tcard softer rounding ── */
+  .tcard {
+    border-radius: 12px !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 1px 8px rgba(28,43,58,0.07), 0 0 0 1px rgba(28,43,58,0.04) !important;
+    overflow: hidden !important;
+  }
+  body.dark .tcard {
+    border-color: #1e2d3a !important;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.25) !important;
+  }
+
+  /* ── KPI stat panels replacing bottom mini-tables ── */
+  .stat-panel {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 8px rgba(28,43,58,0.07);
+    flex: 1;
+  }
+  body.dark .stat-panel {
+    background: #111b25;
+    border-color: #1e2d3a;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+  }
+  .stat-panel-header {
+    background: #1C2B3A;
+    padding: 7px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  body.dark .stat-panel-header { background: #0d1822; }
+  .stat-panel-title {
+    font-family: 'Lexend', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.9px;
+    text-transform: uppercase;
+    color: #7a9ab8;
+  }
+  .stat-panel-cols {
+    display: flex;
+    gap: 0;
+    margin-left: 0;
+  }
+  .stat-panel-col-label {
+    font-family: 'Lexend', sans-serif;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: #5a7a98;
+    padding: 0 8px;
+    min-width: 52px;
+    text-align: left;
+  }
+  .stat-row {
+    display: flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-bottom: 1px solid #f0f4f8;
+    transition: background 0.12s;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row:hover { background: #f6f9fc; }
+  body.dark .stat-row { border-bottom-color: #1a2530; }
+  body.dark .stat-row:hover { background: #162030; }
+  .stat-label {
+    font-family: 'Lexend', sans-serif;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #4a6278;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  body.dark .stat-label { color: #6a8a9a; }
+  .stat-val {
+    font-family: 'Lexend', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: #1C2B3A;
+    text-align: left;
+    min-width: 52px;
+    padding-left: 8px;
+  }
+  body.dark .stat-val { color: #c8d8e8; }
+  .stat-val.negative { color: #c0392b !important; }
+  .stat-val.positive { color: #1a7a1a !important; }
+  .stat-input-row {
+    display: flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-bottom: 1px solid #f0f4f8;
+    gap: 8px;
+  }
+  body.dark .stat-input-row { border-bottom-color: #1a2530; }
+  .stat-input-row input[type="number"] {
+    width: 56px !important;
+    border: 1.5px solid #ccd6e0 !important;
+    border-radius: 7px !important;
+    padding: 4px 6px !important;
+    font-size: 10px !important;
+    font-family: 'Lexend', sans-serif !important;
+    font-weight: 700 !important;
+    background: transparent !important;
+    color: #1C2B3A !important;
+    text-align: center !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+  }
+  .stat-input-row input[type="number"]:focus {
+    background: #fff !important;
+    border-color: #6FA8DC !important;
+    box-shadow: 0 0 0 3px rgba(111,168,220,0.18) !important;
+    outline: none !important;
+  }
+  body.dark .stat-input-row input[type="number"] {
+    border-color: #2e4a62 !important;
+    color: #c8d8e8 !important;
+    background: transparent !important;
+  }
+  body.dark .stat-input-row input[type="number"]:focus { background: #1a2838 !important; }
+
+  .stat-footer {
+    padding: 6px 8px;
+    display: flex;
+    gap: 5px;
+  }
+  .stat-btn {
+    flex: 1;
+    padding: 5px 4px;
+    font-family: 'Lexend', sans-serif;
+    font-size: 8px;
+    font-weight: 700;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    letter-spacing: 0.4px;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .stat-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+  .stat-btn-dark { background: #1C2B3A; color: #E8F0F8; }
+  .stat-btn-blue { background: #2E4A62; color: #E8F0F8; }
+  .stat-toast {
+    font-family: 'Lexend', sans-serif;
+    font-size: 8px;
+    font-weight: 700;
+    color: #6FA8DC;
+    text-align: center;
+    min-height: 14px;
+    padding: 0 8px 4px;
+  }
+
+  /* ── fg-cell layout ── */
+  .fg-cell { min-width:0; display:flex; flex-direction:column; gap:0; }
+
+  /* ── weekoff bar modernize ── */
+  .weekoff-bar {
+    background: #fff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    padding: 6px 12px !important;
+    margin-bottom: 6px !important;
+  }
+  body.dark .weekoff-bar {
+    background: #111b25 !important;
+    border-color: #1e2d3a !important;
+  }
+  .wo-pill {
+    border-radius: 8px !important;
+    font-size: 9.5px !important;
+    padding: 3px 10px !important;
+    border: 1.5px solid #d0dce8 !important;
+    color: #4a6278 !important;
+    background: #f4f7fb !important;
+    transition: all 0.15s !important;
+  }
+  .wo-pill.active {
+    background: #1C2B3A !important;
+    color: #E8F0F8 !important;
+    border-color: #1C2B3A !important;
+  }
+  body.dark .wo-pill { background: #1a2838 !important; border-color: #2e4a62 !important; color: #8ab8d8 !important; }
+  body.dark .wo-pill.active { background: #6FA8DC !important; border-color: #6FA8DC !important; color: #000 !important; }
+
+  /* ── top bar username size ── */
+  .tb-username { font-size: 14px !important; }
+
+  /* ── mobile responsive for stat panels ── */
+  @media screen and (max-width:768px) {
+    .stat-label { font-size: 9px !important; }
+    .stat-val { font-size: 9px !important; min-width: 44px !important; }
+    .stat-row { padding: 4px 10px !important; }
+    .stat-panel-col-label { font-size: 8px !important; }
+  }
+
+  /* ── FIX 1: Mobile table horizontal swipe ──
+     tcard overflow:hidden clips scroll-wrap; let scroll-wrap handle it */
+  @media screen and (max-width:768px) {
+    .scroll-wrap {
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+    .scroll-wrap .tcard {
+      overflow: visible !important;
+      min-width: max-content;
+    }
+  }
+
+  /* ── FIX 4: Freeze first column in attendance calendar ── */
+  .att-calendar { border-collapse: separate !important; border-spacing: 0 !important; }
+  .att-month-label {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 3 !important;
+    background: #2E4A62 !important;
+    box-shadow: 2px 0 4px rgba(0,0,0,0.15);
+  }
+  body.dark .att-month-label { background: #1a3a5c !important; }
+  .att-calendar thead th:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 4 !important;
+    background: #1C2B3A !important;
+    box-shadow: 2px 0 4px rgba(0,0,0,0.2);
+  }
+  body.dark .att-calendar thead th:first-child { background: #0d1822 !important; }
+
 </style>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -829,7 +1286,7 @@ tr.row-disabled td { color: #bbb !important; }
 body.dark tr.row-disabled td.input-cell { background: #141414 !important; }
 body.dark tr.row-disabled td.input-cell input { background: #141414 !important; color: #3a3a3a !important; }
 body.dark tr.row-disabled td { color: #3a3a3a !important; }
-tr.row-disabled input[type="checkbox"] { pointer-events: auto; }
+tr.row-disabled td.input-cell input[type="checkbox"] { pointer-events: auto !important; cursor: pointer !important; }
 
 /* ===== DATABASE MODAL ===== */
 #dbModal {
@@ -1269,6 +1726,7 @@ body.dark .db-entry { border-color: #333; }
           <span class="att-year-label" id="attYearLabel">2026</span>
           <button onclick="attChangeYear(1)">▶</button>
         </div>
+        <button onclick="exportAttendancePDF()" style="padding:3px 10px;font-family:'Lexend',sans-serif;font-size:8px;font-weight:700;background:#1C2B3A;color:#E8F0F8;border:none;border-radius:6px;cursor:pointer;">📄 EXPORT PDF</button>
         <button onclick="closeAttendance()" style="padding:2px 8px;font-family:'Lexend',sans-serif;font-size:8px;font-weight:700;background:transparent;color:#1C2B3A;border:1px solid #1C2B3A;border-radius:6px;cursor:pointer;">✕ CLOSE</button>
       </div>
     </div>
@@ -1445,63 +1903,85 @@ body.dark .db-entry { border-color: #333; }
 <!-- ======== BOTTOM PANELS ======== -->
 <div class="four-grid">
 
+  <!-- Panel 1: Avg Daily / Weekly -->
   <div class="fg-cell">
-    <div class="tcard tcard-compact"><table>
-      <tr><td class="bg-red left">DAY/AUX</td><td class="bg-red" id="dw_daily_header">DAILY</td><td class="bg-red" id="dw_weekly_header">WEEKLY</td></tr>
-      <tr><td class="left">PRODUCTION</td><td id="dw_d_prod">–</td><td id="dw_w_prod">–</td></tr>
-      <tr><td class="left">COACHING</td><td id="dw_d_coach">–</td><td id="dw_w_coach">–</td></tr>
-      <tr><td class="left">MEETING</td><td id="dw_d_meet">–</td><td id="dw_w_meet">–</td></tr>
-      <tr><td class="left">WELLBEING</td><td id="dw_d_well">–</td><td id="dw_w_well">–</td></tr>
-      <tr><td class="left">BILLING</td><td id="dw_d_billing">–</td><td id="dw_w_billing">–</td></tr>
-      <tr><td class="left">TOTAL AUX</td><td id="dw_d_aux">–</td><td id="dw_w_aux">–</td></tr>
-      <tr><td class="left">UTIL</td><td id="dw_d_util">–</td><td id="dw_w_util">–</td></tr>
-    </table></div>
-    <div class="fg-btns">
-      <button onclick="copyDW('daily')" class="fg-btn fg-btn-dark">COPY DAILY</button>
-      <button onclick="copyDW('weekly')" class="fg-btn fg-btn-blue">COPY WEEKLY</button>
+    <div class="stat-panel">
+      <div class="stat-panel-header">
+        <span class="stat-panel-title">Billing</span>
+        <div class="stat-panel-cols">
+          <span class="stat-panel-col-label" id="dw_daily_header">Daily</span>
+          <span class="stat-panel-col-label" id="dw_weekly_header">Weekly</span>
+        </div>
+      </div>
+      <div class="stat-row"><span class="stat-label">Production</span><span class="stat-val" id="dw_d_prod">–</span><span class="stat-val" id="dw_w_prod">–</span></div>
+      <div class="stat-row"><span class="stat-label">Coaching</span><span class="stat-val" id="dw_d_coach">–</span><span class="stat-val" id="dw_w_coach">–</span></div>
+      <div class="stat-row"><span class="stat-label">Meeting</span><span class="stat-val" id="dw_d_meet">–</span><span class="stat-val" id="dw_w_meet">–</span></div>
+      <div class="stat-row"><span class="stat-label">Wellbeing</span><span class="stat-val" id="dw_d_well">–</span><span class="stat-val" id="dw_w_well">–</span></div>
+      <div class="stat-row"><span class="stat-label">Billing</span><span class="stat-val" id="dw_d_billing">–</span><span class="stat-val" id="dw_w_billing">–</span></div>
+      <div class="stat-row"><span class="stat-label">Total Aux</span><span class="stat-val" id="dw_d_aux">–</span><span class="stat-val" id="dw_w_aux">–</span></div>
+      <div class="stat-row"><span class="stat-label">Utilization</span><span class="stat-val" id="dw_d_util">–</span><span class="stat-val" id="dw_w_util">–</span></div>
     </div>
-    <div id="dwToast" style="display:none;padding:2px 4px;background:#1C2B3A;color:#E8F0F8;border-radius:4px;font-size:8px;text-align:center;">Copied!</div>
-  </div>
-
-  <div class="fg-cell">
-    <div class="tcard tcard-compact"><table>
-      <tr><td class="bg-red left">DAY/AUX</td><td class="bg-red">ACHIEVED</td><td class="bg-red">BALANCE</td></tr>
-      <tr><td class="left">PRODUCTION</td><td id="p2_prod">–</td><td id="p2_bprod">–</td></tr>
-      <tr><td class="left">COACHING</td><td id="p2_coach">–</td><td id="p2_bcoach">–</td></tr>
-      <tr><td class="left">MEETING</td><td id="p2_meet">–</td><td id="p2_bmeet">–</td></tr>
-      <tr><td class="left">WELLBEING</td><td id="p2_well">–</td><td id="p2_bwell">–</td></tr>
-      <tr><td class="left">BILLING</td><td id="p2_billing">–</td><td id="p2_bbilling">–</td></tr>
-      <tr><td class="left">UTIL</td><td id="p2_util">–</td><td id="p2_butil">–</td></tr>
-      <tr><td class="left">COUNT</td><td id="p2_count">0</td><td id="p2_count_bal">–</td></tr>
-    </table></div>
-    <div class="fg-btns">
-      <button onclick="copyData('achieved')" class="fg-btn fg-btn-dark">COPY ACHIEVED</button>
-      <button onclick="copyData('balance')" class="fg-btn fg-btn-blue">COPY BALANCE</button>
+    <div class="stat-footer">
+      <button onclick="copyDW('daily')" class="stat-btn stat-btn-dark">Copy Daily</button>
+      <button onclick="copyDW('weekly')" class="stat-btn stat-btn-blue">Copy Weekly</button>
     </div>
-    <div id="copyToast" style="display:none;padding:2px 4px;background:#1C2B3A;color:#E8F0F8;border-radius:4px;font-size:8px;text-align:center;">Copied!</div>
+    <div id="dwToast" class="stat-toast" style="display:none;">Copied!</div>
   </div>
 
+  <!-- Panel 2: Achieved / Balance -->
   <div class="fg-cell">
-    <div class="tcard tcard-compact"><table>
-      <tr><td class="bg-red left">DAY/AUX</td><td class="bg-red">REMAINING</td></tr>
-      <tr><td class="left">DAYS LEFT</td>
-        <td class="input-cell" style="padding:0;"><input type="number" id="daysLeft" value="1" min="0" max="5" style="width:100%;background:#D9D9D9;text-align:center;" onchange="recalc()"></td>
-      </tr>
-      <tr><td class="left">PRODUCTION</td><td id="p2_rprod">–</td></tr>
-      <tr><td class="left">AUX</td><td id="p2_raux">–</td></tr>
-      <tr><td class="left">TOTAL</td><td id="p2_rtotal">–</td></tr>
-    </table></div>
+    <div class="stat-panel">
+      <div class="stat-panel-header">
+        <span class="stat-panel-title">Week Progress</span>
+        <div class="stat-panel-cols">
+          <span class="stat-panel-col-label">Done</span>
+          <span class="stat-panel-col-label">Left</span>
+        </div>
+      </div>
+      <div class="stat-row"><span class="stat-label">Production</span><span class="stat-val" id="p2_prod">–</span><span class="stat-val" id="p2_bprod">–</span></div>
+      <div class="stat-row"><span class="stat-label">Coaching</span><span class="stat-val" id="p2_coach">–</span><span class="stat-val" id="p2_bcoach">–</span></div>
+      <div class="stat-row"><span class="stat-label">Meeting</span><span class="stat-val" id="p2_meet">–</span><span class="stat-val" id="p2_bmeet">–</span></div>
+      <div class="stat-row"><span class="stat-label">Wellbeing</span><span class="stat-val" id="p2_well">–</span><span class="stat-val" id="p2_bwell">–</span></div>
+      <div class="stat-row"><span class="stat-label">Billing</span><span class="stat-val" id="p2_billing">–</span><span class="stat-val" id="p2_bbilling">–</span></div>
+      <div class="stat-row"><span class="stat-label">Utilization</span><span class="stat-val" id="p2_util">–</span><span class="stat-val" id="p2_butil">–</span></div>
+      <div class="stat-row"><span class="stat-label">Job Count</span><span class="stat-val" id="p2_count">0</span><span class="stat-val" id="p2_count_bal">–</span></div>
+    </div>
+    <div class="stat-footer">
+      <button onclick="copyData('achieved')" class="stat-btn stat-btn-dark">Copy Done</button>
+      <button onclick="copyData('balance')" class="stat-btn stat-btn-blue">Copy Left</button>
+    </div>
+    <div id="copyToast" class="stat-toast" style="display:none;">Copied!</div>
   </div>
 
+  <!-- Panel 3: Remaining -->
   <div class="fg-cell">
-    <div class="tcard tcard-compact"><table>
-      <tr><td class="bg-red left" colspan="2">TODAY'S BALANCE</td></tr>
-      <tr><td class="left" id="today_day_label" style="font-size:7px;opacity:0.7;">–</td><td id="today_day_val" style="font-size:7px;opacity:0.7;">–</td></tr>
-      <tr><td class="left">PRODUCTION</td><td id="today_prod_bal">–</td></tr>
-      <tr><td class="left">TOTAL AUX</td><td id="today_aux_bal">–</td></tr>
-      <tr><td class="left">BILLING</td><td id="today_bill_bal">–</td></tr>
-      <tr><td class="left">UTIL</td><td id="today_util_val">–</td></tr>
-    </table></div>
+    <div class="stat-panel">
+      <div class="stat-panel-header">
+        <span class="stat-panel-title">Remaining</span>
+      </div>
+      <div class="stat-input-row">
+        <span class="stat-label">Days Left</span>
+        <input type="number" id="daysLeft" value="1" min="0" max="5" onchange="recalc()">
+      </div>
+      <div class="stat-row"><span class="stat-label">Production</span><span class="stat-val" id="p2_rprod">–</span></div>
+      <div class="stat-row"><span class="stat-label">Aux</span><span class="stat-val" id="p2_raux">–</span></div>
+      <div class="stat-row"><span class="stat-label">Total / Day</span><span class="stat-val" id="p2_rtotal">–</span></div>
+    </div>
+  </div>
+
+  <!-- Panel 4: Today's Balance -->
+  <div class="fg-cell">
+    <div class="stat-panel">
+      <div class="stat-panel-header">
+        <span class="stat-panel-title">Today</span>
+        <span class="stat-panel-col-label" id="today_day_label">–</span>
+      </div>
+      <div class="stat-row" style="display:none;"><span id="today_day_val"></span></div>
+      <div class="stat-row"><span class="stat-label">Production</span><span class="stat-val" id="today_prod_bal">–</span></div>
+      <div class="stat-row"><span class="stat-label">Total Aux</span><span class="stat-val" id="today_aux_bal">–</span></div>
+      <div class="stat-row"><span class="stat-label">Billing</span><span class="stat-val" id="today_bill_bal">–</span></div>
+      <div class="stat-row"><span class="stat-label">Utilization</span><span class="stat-val" id="today_util_val">–</span></div>
+    </div>
   </div>
 
 </div><!-- end panels -->
@@ -2566,6 +3046,81 @@ function renderAttCalendar() {
 
   html += `</tbody>`;
   table.innerHTML = html;
+}
+
+
+function exportAttendancePDF() {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const WEEK_DAYS = ['SAT','SUN','MON','TUE','WED','THU','FRI'];
+  const JS_TO_POS = {6:0, 0:1, 1:2, 2:3, 3:4, 4:5, 5:6};
+  const COLORS = { WO:'#B7E1CD', PL:'#FFE599', HL:'#9FC5E8', UL:'#EA9999', SL:'#F9CB9C' };
+
+  let maxLastCol = 0;
+  for (let m = 0; m < 12; m++) {
+    const days = new Date(attYear, m+1, 0).getDate();
+    const startPos = JS_TO_POS[new Date(attYear, m, 1).getDay()];
+    if (startPos + days > maxLastCol) maxLastCol = startPos + days;
+  }
+  const TOTAL_COLS = maxLastCol;
+
+  // Build summary counts
+  const counts = { WO:0, PL:0, HL:0, UL:0, SL:0 };
+  Object.values(attData).forEach(v => { if (counts[v] !== undefined) counts[v]++; });
+
+  // Week-day header cells
+  let dayHeaders = `<td style="min-width:52px;background:#1C2B3A;color:#E8F0F8;font-size:7px;font-weight:700;padding:3px;text-align:center;border:1px solid #888;">MONTH</td>`;
+  for (let i = 0; i < TOTAL_COLS; i++) {
+    const isLast = (i%7)===6;
+    dayHeaders += `<td style="width:18px;min-width:18px;font-size:7px;background:#1C2B3A;color:#E8F0F8;border:1px solid #555;padding:1px;text-align:center;${isLast?'border-right:2px solid #aaa;':''}">${WEEK_DAYS[i%7]}</td>`;
+  }
+
+  // Month rows
+  let rows = '';
+  for (let m = 0; m < 12; m++) {
+    const daysInMonth = new Date(attYear, m+1, 0).getDate();
+    const startPos = JS_TO_POS[new Date(attYear, m, 1).getDay()];
+    const bg = m%2===0 ? '#EAF1F8' : '#D0E4F5';
+    rows += `<tr><td style="background:#2E4A62;color:#fff;font-size:8px;font-weight:700;padding:2px 5px;border:1px solid #888;white-space:nowrap;">${MONTHS[m].substring(0,3).toUpperCase()}</td>`;
+    let dayNum = 1;
+    for (let i = 0; i < TOTAL_COLS; i++) {
+      const isLast = (i%7)===6;
+      if (i < startPos || dayNum > daysInMonth) {
+        rows += `<td style="background:${m%2===0?'#E0EBF5':'#C4D8EC'};border:1px solid #ccc;${isLast?'border-right:2px solid #aaa;':''}"></td>`;
+      } else {
+        const key = `${attYear}-${String(m+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+        const leave = attData[key];
+        const cellBg = leave ? (COLORS[leave]||bg) : bg;
+        rows += `<td style="background:${cellBg};font-size:7px;font-weight:700;text-align:center;border:1px solid #ccc;padding:1px;${isLast?'border-right:2px solid #aaa;':''}">${leave||dayNum}</td>`;
+        dayNum++;
+      }
+    }
+    rows += `</tr>`;
+  }
+
+  const legend = Object.entries({WO:'Week Off',PL:'Planned Leave',HL:'Half Day',UL:'Unplanned',SL:'Sick Leave'})
+    .map(([k,v]) => `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:9px;font-weight:700;">
+      <span style="width:22px;height:15px;background:${COLORS[k]};border-radius:3px;border:1px solid #bbb;display:inline-block;"></span>${k} — ${v} (${counts[k]})</span>`).join('');
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Attendance ${attYear}</title>
+  <style>
+    @media print { @page { size: landscape; margin: 8mm; } body { margin: 0; } }
+    body { font-family: 'Arial', sans-serif; padding: 12px; font-size: 10px; color: #1C2B3A; }
+    h2 { font-size: 14px; margin: 0 0 4px; color: #1C2B3A; }
+    .subtitle { font-size: 9px; color: #888; margin-bottom: 12px; }
+    table { border-collapse: collapse; width: 100%; }
+    .summary { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 8px; background: #f5f5f5; border-radius: 6px; }
+  </style></head><body>
+  <h2>📅 Attendance Calendar — ${attYear}</h2>
+  <div class="subtitle">Exported on ${new Date().toLocaleString()}</div>
+  <table>
+    <thead><tr>${dayHeaders}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="summary">${legend}</div>
+  <script>window.onload = () => { window.print(); }<\/script>
+  </body></html>`);
+  win.document.close();
 }
 
 function attCellClick(e, cell) {
