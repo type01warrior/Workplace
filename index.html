@@ -991,6 +991,7 @@
   window.saveUserData = async function() {
     const user = auth.currentUser;
     if (!user) return;
+    if (!window._dataLoaded) return; // never overwrite cloud with empty local state
     const days = ['sun','mon','tue','wed','thu'];
     const durFields = ['prod','coach','meet','well','break','unavail'];
     const data = { updatedAt: Date.now() };
@@ -1104,13 +1105,16 @@
           }
         } catch(e) {}
       }
+      window._dataLoaded = true;
       if (window.recalc) window.recalc();
     } catch(e) { console.warn('Load failed:', e); }
   };
 
   // ── AUTH STATE LISTENER ──
+  window._dataLoaded = false; // guard: don't save until cloud data is loaded
   onAuthStateChanged(auth, async (user) => {
     if (user) {
+      window._dataLoaded = false; // reset on each login
       document.getElementById('authOverlay').style.display = 'none';
       document.getElementById('mainApp').style.display = 'block';
       // First, show whatever Firebase Auth has immediately
@@ -1127,9 +1131,10 @@
       } catch(e) { /* silently ignore, fallback already set */ }
       initUserStorage(user.uid);
       await window.loadUserData(user.uid);
+      window._dataLoaded = true; // safe to save now
       if (window.recalc) window.recalc();
       // auto-save every 30s
-      window._autoSaveInterval = setInterval(() => window.saveUserData(), 30000);
+      window._autoSaveInterval = setInterval(() => { if (window._dataLoaded) window.saveUserData(); }, 30000);
     } else {
       _currentUid = null;
       document.getElementById('authOverlay').style.display = 'flex';
@@ -3016,6 +3021,7 @@ window.addEventListener('load', () => {
   // auto-save on any input change (debounced 1.5s to avoid hammering Firestore)
   let _autoSaveTimer = null;
   function debouncedSave() {
+    if (!window._dataLoaded) return;
     clearTimeout(_autoSaveTimer);
     _autoSaveTimer = setTimeout(() => { if(window.saveUserData) window.saveUserData(); }, 1500);
   }
@@ -3099,6 +3105,58 @@ history.pushState(null, '', '');
     if (el && !el.disabled) { el.focus(); el.select && el.select(); }
   });
 })();
+
+
+// ===== DATA RECOVERY — reads localStorage and re-uploads to Firestore =====
+window.recoverFromLocalStorage = async function() {
+  const uid = window._fbAuth && window._fbAuth.currentUser && window._fbAuth.currentUser.uid;
+  if (!uid) { alert('Please log in first.'); return; }
+  
+  // Try all possible UID-scoped localStorage keys
+  const attKey = uid + '_att_data';
+  const dbKey = uid + '_db_snapshots';
+  const woKey = uid + '_weekoff_settings';
+  
+  let recovered = { att: false, db: false };
+  
+  const rawAtt = localStorage.getItem(attKey);
+  if (rawAtt) {
+    try {
+      const parsed = JSON.parse(rawAtt);
+      if (typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+        window.attData = parsed;
+        attData = parsed;
+        recovered.att = true;
+        console.log('Recovered attData:', Object.keys(parsed).length, 'entries');
+      }
+    } catch(e) {}
+  }
+  
+  const rawDb = localStorage.getItem(dbKey);
+  if (rawDb) {
+    try {
+      const parsed = JSON.parse(rawDb);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        window.dbEntries = parsed;
+        dbEntries = parsed;
+        recovered.db = true;
+        console.log('Recovered dbEntries:', parsed.length, 'entries');
+      }
+    } catch(e) {}
+  }
+
+  window._dataLoaded = true;
+  await window.saveUserData();
+  if (typeof renderDbEntries === 'function') renderDbEntries();
+  if (document.getElementById('attendanceModal')?.classList.contains('open')) {
+    if (typeof renderAttCalendar === 'function') renderAttCalendar();
+  }
+  
+  const msg = `Recovery complete!
+Attendance: ${recovered.att ? '✓ found & restored' : '✗ not found in localStorage'}
+Database: ${recovered.db ? '✓ found & restored' : '✗ not found in localStorage'}`;
+  alert(msg);
+};
 
 // ===== AUTH FUNCTIONS =====
 function authShowTab(tab) {
@@ -3190,7 +3248,7 @@ async function authForgot() {
 }
 
 // ===== DATABASE TAB =====
-window.dbEntries = window.dbEntries || [];  // window global so module can write it
+window.dbEntries = [];  // will be populated by initUserStorage after login
 let dbEntries = window.dbEntries;
 
 function showDbTab() {
@@ -3282,7 +3340,7 @@ function applyWeekOffUpToToday() {
 
 // ===== ATTENDANCE =====
 let attYear = new Date().getFullYear();
-window.attData = window.attData || {};  // window global so module can write it
+window.attData = {};  // will be populated by initUserStorage after login
 let attData = window.attData;
 let lpTargetKey = null;
 let lpClickCount = {};
@@ -4000,6 +4058,9 @@ function authSignOut() {
     <button class="auth-btn" onclick="settingsSavePassword()">CHANGE PASSWORD</button>
     <div class="settings-save" id="set-pass-msg"></div>
 
+    <div class="settings-section" style="color:#2E4A62;border-color:#2E4A62;">🔄 Recovery</div>
+    <p style="font-size:9px;color:#888;margin-bottom:8px;">If sync accidentally overwrote your data, try recovering from this device's local storage.</p>
+    <button class="auth-btn" onclick="window.recoverFromLocalStorage()" style="background:#2E4A62;margin-bottom:12px;">🔄 RECOVER DATA FROM THIS DEVICE</button>
     <div class="settings-section" style="color:#c0392b;border-color:#c0392b;">⚠ Danger Zone</div>
     <p style="font-size:9px;color:#888;margin-bottom:10px;">Deleting your account is permanent and cannot be undone.</p>
     <button class="auth-btn" onclick="openDeleteAccountModal()" style="background:#c0392b;border-color:#c0392b;color:#fff;">DELETE MY ACCOUNT</button>
