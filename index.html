@@ -336,7 +336,11 @@
     --cell-bg: #0d0d0d;
     --header-text: #ffffff;
   }
-  body { background: var(--bg-page); color: var(--text); }
+  body { background: var(--bg-page); color: var(--text);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
   .page { background: var(--bg-page); }
 
   /* All td/th get dark cell bg in dark mode */
@@ -433,7 +437,7 @@
     padding: 1px 2px;
   }
 
-  .top-bar { flex-direction:column !important; gap:5px !important; padding:10px 10px 8px !important; }
+  .top-bar { flex-direction:column !important; gap:5px !important; padding:10px 10px 8px !important; padding-top: max(10px, env(safe-area-inset-top, 0px) + 4px) !important; }
   .tb-r1,.tb-r3 { display:flex; align-items:center; width:100%; gap:5px; }
   .tb-r2 { display:flex; align-items:center; width:100%; gap:5px; flex-wrap:wrap; }
   .tb-username { font-family:'Lexend',sans-serif; font-size:16px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%; }
@@ -1341,7 +1345,11 @@ body.dark .db-modal-header h4 { color: #e8e8e8; }
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.55); z-index: 8500;
   align-items: flex-start; justify-content: center;
-  padding: 16px 4px 20px; font-family: 'Lexend', sans-serif;
+  padding: 16px 4px 20px;
+  padding-top: max(16px, env(safe-area-inset-top, 0px) + 8px);
+  padding-left: max(4px, env(safe-area-inset-left, 0px));
+  padding-right: max(4px, env(safe-area-inset-right, 0px));
+  font-family: 'Lexend', sans-serif;
   overflow-y: auto; overflow-x: hidden;
   box-sizing: border-box;
 }
@@ -1350,7 +1358,7 @@ body.dark .db-modal-header h4 { color: #e8e8e8; }
   background: #fff; border: 1px solid #1C2B3A;
   box-shadow: 4px 4px 0 #1C2B3A; border-radius: 8px;
   padding: 10px 4px; width: 100%; max-width: 100%;
-  box-sizing: border-box; overflow: hidden;
+  box-sizing: border-box; overflow: visible;
   margin-bottom: 20px;
 }
 body.dark .att-card { background: #1a1a1a; border-color: #333; box-shadow: 4px 4px 0 #000; }
@@ -1362,8 +1370,11 @@ body.dark .att-header h4 { color: #e8e8e8; }
 .att-year-label { font-size: 15px; font-weight: 700; color: #1C2B3A; min-width: 50px; text-align: center; }
 body.dark .att-year-label { color: #e8e8e8; }
 .att-calendar-wrap {
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
   transform-origin: top left;
+  display: block;
 }
 .att-calendar { border-collapse: collapse; font-size: 8px; font-weight: 700; font-family: 'Lexend', sans-serif; }
 .att-calendar th, .att-calendar td { border: 1px solid #B0BCC8; padding: 0; text-align: center; white-space: nowrap; min-width: 12px; width: 12px; height: 14px; line-height: 1; font-size: 6px; }
@@ -2180,9 +2191,17 @@ function utilColor(pct) {
 function applyUtilColor(elId, pct) {
   const el = document.getElementById(elId);
   if (!el) return;
-  if (pct === null) { el.style.color = ''; el.style.fontWeight = ''; return; }
-  el.style.color = utilColor(pct * 100);
-  el.style.fontWeight = '700';
+  if (pct === null) {
+    el.style.removeProperty('color');
+    el.style.removeProperty('font-weight');
+    el.removeAttribute('data-util-color');
+    return;
+  }
+  const c = utilColor(pct * 100);
+  // Use cssText trick to force !important inline (overrides dark mode td rules)
+  el.style.setProperty('color', c, 'important');
+  el.style.setProperty('font-weight', '700', 'important');
+  el.setAttribute('data-util-color', '1');
 }
 
 function recalc() {
@@ -3391,6 +3410,13 @@ function attChangeYear(delta) {
   renderAttCalendar();
 }
 
+// Re-render calendar on resize so scale stays correct
+window.addEventListener('resize', () => {
+  if (document.getElementById('attendanceModal')?.classList.contains('open')) {
+    renderAttCalendar();
+  }
+});
+
 function renderAttCalendar() {
   const table = document.getElementById('attCalendarTable');
 
@@ -3459,21 +3485,32 @@ function renderAttCalendar() {
 
   html += `</tbody>`;
   table.innerHTML = html;
-  // Auto-scale calendar to fit card width
+  // Scale on desktop, scroll on mobile
   requestAnimationFrame(() => {
     const wrap = document.querySelector('.att-calendar-wrap');
     const card = document.querySelector('.att-card');
     if (!wrap || !card) return;
-    wrap.style.transform = 'scale(1)';
-    const tableW = table.offsetWidth;
-    const cardW = card.clientWidth - 8;
-    if (tableW > cardW && tableW > 0) {
-      const scale = Math.max(0.3, cardW / tableW);
-      wrap.style.transform = `scale(${scale})`;
-      wrap.style.transformOrigin = 'top left';
-      wrap.parentElement.style.height = (table.offsetHeight * scale) + 'px';
+    wrap.style.transform = '';
+    wrap.parentElement.style.height = '';
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      // Mobile: natural horizontal scroll, no scaling
+      wrap.style.overflowX = 'auto';
+      wrap.style.transform = 'none';
     } else {
-      wrap.parentElement.style.height = '';
+      // Desktop: scale to fit perfectly
+      wrap.style.overflowX = 'visible';
+      const tableW = table.offsetWidth;
+      const cardW = card.clientWidth - 12;
+      if (tableW > cardW && tableW > 0) {
+        const scale = Math.max(0.25, cardW / tableW);
+        wrap.style.transform = `scale(${scale})`;
+        wrap.style.transformOrigin = 'top left';
+        // Give the container the correct scaled height so rows below don't overlap
+        requestAnimationFrame(() => {
+          wrap.parentElement.style.height = (table.offsetHeight * scale) + 'px';
+        });
+      }
     }
   });
 }
