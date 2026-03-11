@@ -434,10 +434,11 @@
   }
 
   .top-bar { flex-direction:column !important; gap:5px !important; padding:10px 10px 8px !important; }
-  .tb-r1,.tb-r2,.tb-r3 { display:flex; align-items:center; width:100%; gap:5px; }
+  .tb-r1,.tb-r3 { display:flex; align-items:center; width:100%; gap:5px; }
+  .tb-r2 { display:flex; align-items:center; width:100%; gap:5px; flex-wrap:wrap; }
   .tb-username { font-family:'Lexend',sans-serif; font-size:16px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%; }
   .tb-week { margin-left:auto; font-family:'Lexend',sans-serif; font-size:13px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
-  .tb-btn2 { padding:4px 10px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; white-space:nowrap; }
+  .tb-btn2 { padding:4px 8px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; white-space:nowrap; }
   .tb-btn2-red { background:rgba(192,57,43,0.7) !important; }
   .tb-time { margin-left:auto; font-family:'Lexend',sans-serif; font-size:13px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
   .tb-wd { font-family:'Lexend',sans-serif; font-size:12px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
@@ -1007,14 +1008,11 @@
       const el = document.getElementById(id);
       if (el) data[id] = el.value;
     });
-    // Save attendance + weekoff + db_snapshots using live in-memory globals
-    data['att_data'] = JSON.stringify(typeof attData !== 'undefined' ? attData : (window.attData || {}));
-    data['att_processed'] = JSON.stringify(typeof lsGet === 'function' ? lsGet('att_processed_weeks','{}') : {});
-    data['weekoff_settings'] = JSON.stringify(typeof weekOffDays !== 'undefined' ? {
-      days: [...weekOffDays],
-      until: typeof weekOffUntil !== 'undefined' && weekOffUntil ? weekOffUntil.toISOString().split('T')[0] : null
-    } : null);
-    data['db_snapshots'] = JSON.stringify(typeof dbEntries !== 'undefined' ? dbEntries : (window.dbEntries || []));
+    // Save attendance + weekoff + db_snapshots — use window globals (module scope ≠ outer scope)
+    data['att_data'] = JSON.stringify(window.attData || {});
+    data['att_processed'] = JSON.stringify(window._attProcessed || {});
+    data['weekoff_settings'] = JSON.stringify(window._weekoffSnapshot || null);
+    data['db_snapshots'] = JSON.stringify(window.dbEntries || []);
     try {
       await window._fbFns.setDoc(window._fbFns.doc(db, 'userData', user.uid), data, { merge: true });
     } catch(e) { console.warn('Save failed:', e); }
@@ -1065,9 +1063,8 @@
         try {
           const ad = JSON.parse(data['att_data']);
           if (typeof ad === 'object' && ad !== null) {
-            attData = ad;
+            window.attData = ad;  // write to window so regular script sees it
             if (typeof lsSet === 'function') lsSet('att_data', ad);
-            // Re-render calendar if it's open
             if (document.getElementById('attendanceModal')?.classList.contains('open')) {
               if (typeof renderAttCalendar === 'function') renderAttCalendar();
             }
@@ -1084,19 +1081,16 @@
         try {
           const wo = JSON.parse(data['weekoff_settings']);
           if (wo) {
+            window._weekoffSnapshot = wo;
             if (typeof lsSet === 'function') lsSet('weekoff_settings', wo);
-            // Apply weekoff directly to live state
-            if (typeof weekOffDays !== 'undefined' && wo.days) {
-              weekOffDays.clear();
-              wo.days.forEach(d => weekOffDays.add(d));
+            if (wo.days) {
+              if (window.weekOffDays) { window.weekOffDays.clear(); wo.days.forEach(d => window.weekOffDays.add(d)); }
               document.querySelectorAll('.wo-pill').forEach(p => {
-                p.classList.toggle('active', weekOffDays.has(p.dataset.day));
+                p.classList.toggle('active', wo.days.includes(p.dataset.day));
               });
               if (typeof updateWorkingDayRows === 'function') updateWorkingDayRows();
             }
-            if (typeof weekOffUntil !== 'undefined' && wo.until) {
-              weekOffUntil = new Date(wo.until);
-            }
+            if (wo.until && window.weekOffUntil !== undefined) window.weekOffUntil = new Date(wo.until);
           }
         } catch(e) {}
       }
@@ -1104,8 +1098,9 @@
         try {
           const ds = JSON.parse(data['db_snapshots']);
           if (Array.isArray(ds)) {
-            dbEntries = ds;
-            if (lsSet) lsSet('db_snapshots', ds);
+            window.dbEntries = ds;  // write to window so regular script sees it
+            if (typeof lsSet === 'function') lsSet('db_snapshots', ds);
+            if (typeof renderDbEntries === 'function') renderDbEntries();
           }
         } catch(e) {}
       }
@@ -1380,7 +1375,7 @@ body.dark .db-modal-header h4 { color: #e8e8e8; }
 .att-card {
   background: #fff; border: 1px solid #1C2B3A;
   box-shadow: 4px 4px 0 #1C2B3A; border-radius: 8px;
-  padding: 16px 18px; width: 99vw; max-width: 1600px;
+  padding: 10px 6px; width: 99vw; max-width: 1800px;
   margin-bottom: 40px;
 }
 body.dark .att-card { background: #1a1a1a; border-color: #333; box-shadow: 4px 4px 0 #000; }
@@ -1393,15 +1388,15 @@ body.dark .att-header h4 { color: #e8e8e8; }
 body.dark .att-year-label { color: #e8e8e8; }
 .att-calendar-wrap { overflow-x: auto; }
 .att-calendar { border-collapse: collapse; font-size: 8px; font-weight: 700; font-family: 'Lexend', sans-serif; }
-.att-calendar th, .att-calendar td { border: 1px solid #B0BCC8; padding: 1px 1px; text-align: center; white-space: nowrap; min-width: 18px; width: 18px; height: 16px; line-height: 1; font-size: 7px; }
+.att-calendar th, .att-calendar td { border: 1px solid #B0BCC8; padding: 0 0; text-align: center; white-space: nowrap; min-width: 14px; width: 14px; height: 15px; line-height: 1; font-size: 6.5px; }
 body.dark .att-calendar th, body.dark .att-calendar td { border-color: #3a3a3a; }
-.att-calendar thead th { background: #1C2B3A; color: #E8F0F8; font-size: 6.5px; padding: 2px 1px; }
+.att-calendar thead th { background: #1C2B3A; color: #E8F0F8; font-size: 6px; padding: 1px 0; }
 .att-calendar th.week-end-th, .att-calendar td.week-end { border-right: 2px solid #1C2B3A !important; }
 body.dark .att-calendar th.week-end-th, body.dark .att-calendar td.week-end { border-right: 2px solid #6699bb !important; }
 .att-calendar th.year-header { background: #1C2B3A; color: #E8F0F8; font-size: 9px; font-weight: 700; padding: 3px; letter-spacing: 1px; }
-.att-month-label { background: #2E4A62 !important; color: #E8F0F8 !important; font-size: 7.5px !important; text-align: left !important; padding-left: 4px !important; min-width: 48px !important; width: 48px !important; font-weight: 700 !important; }
+.att-month-label { background: #2E4A62 !important; color: #E8F0F8 !important; font-size: 7px !important; text-align: left !important; padding-left: 3px !important; min-width: 40px !important; width: 40px !important; font-weight: 700 !important; }
 body.dark .att-month-label { background: #1a3a5c !important; }
-.att-cell { cursor: pointer; background: #EAF1F8; transition: background 0.15s; font-size: 7px; }
+.att-cell { cursor: pointer; background: #EAF1F8; transition: background 0.15s; font-size: 6.5px; }
 body.dark .att-cell { background: #222; color: #e8e8e8; }
 .att-cell:hover { background: #c8dff5 !important; }
 body.dark .att-cell:hover { background: #1a3a5c !important; }
@@ -1770,7 +1765,7 @@ body.dark .db-entry { border-color: #333; }
       <div style="display:flex;gap:6px;align-items:center;">
         <span class="db-push-msg" id="dbPushMsg"></span>
         <button onclick="clearAllDb()" style="padding:2px 8px;font-family:'Lexend',sans-serif;font-size:8px;font-weight:700;background:transparent;color:#c0392b;border:1px solid #c0392b;border-radius:6px;cursor:pointer;">CLEAR ALL</button>
-        <button onclick="showDbTab()" style="padding:2px 8px;font-family:'Lexend',sans-serif;font-size:8px;font-weight:700;background:transparent;color:#1C2B3A;border:1px solid #1C2B3A;border-radius:6px;cursor:pointer;">✕ CLOSE</button>
+        <button onclick="showDbTab()" style="padding:4px 12px;font-family:'Lexend',sans-serif;font-size:9px;font-weight:700;background:rgba(192,57,43,0.15);color:#c0392b;border:1.5px solid #c0392b;border-radius:6px;cursor:pointer;">✕ CLOSE</button>
       </div>
     </div>
     <div id="dbEntriesList"><div class="db-empty">No snapshots yet. Click "Push to Database" to capture the main table.</div></div>
@@ -2193,6 +2188,25 @@ function updateRowDisabledState() {
   });
 }
 
+
+// Utilization colour bands: 92.45–93.45 = green, ±1% = yellow, outside = red
+function utilColor(pct) {
+  if (pct === null || pct === undefined) return '';
+  const target = 92.95;
+  const diff = Math.abs(pct - target);
+  if (diff <= 0.50) return '#22a722';   // green  92.45–93.45
+  if (diff <= 1.50) return '#e6a817';   // yellow 90.95–91.45 or 93.45–94.45
+  return '#d63031';                      // red    <91.45 or >94.45
+}
+
+function applyUtilColor(elId, pct) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (pct === null) { el.style.color = ''; el.style.fontWeight = ''; return; }
+  el.style.color = utilColor(pct * 100);
+  el.style.fontWeight = '700';
+}
+
 function recalc() {
   updateRowDisabledState();
   const weekLabel = getWeekLabel();
@@ -2232,6 +2246,7 @@ function recalc() {
 
     setText('aux_' + d, fmtTime(aux));
     setText('util_' + d, util !== null ? fmtPct(util) : '–');
+    applyUtilColor('util_' + d, util);
     setText('bill_' + d, fmtTime(billing));
 
     if (document.getElementById('chk_' + d)?.checked) {
@@ -2257,6 +2272,7 @@ function recalc() {
   setText('tot_unavail', fmtTime(totUnavail));
   setText('tot_aux', fmtTime(totAux));
   setText('tot_util', totUtil !== null ? fmtPct(totUtil) : '–');
+  applyUtilColor('tot_util', totUtil);
   setText('tot_jobs', totJobs);
   setText('tot_billing', fmtTime(totBilling));
 
@@ -2871,7 +2887,9 @@ function initUserStorage(uid) {
   _currentUid = uid;
   // Re-init attData and dbEntries from this user's scoped keys
   attData = lsGet('att_data', '{}');
+  window.attData = attData;
   dbEntries = lsGet('db_snapshots', '[]');
+  window.dbEntries = dbEntries;
   // Load weekoff settings
   const wo = lsGet('weekoff_settings', 'null');
   if (wo) {
@@ -2886,10 +2904,12 @@ function initUserStorage(uid) {
 }
 
 function saveWeekOffSettings() {
-  lsSet('weekoff_settings', {
+  const _wos = {
     days: [...weekOffDays],
     until: weekOffUntil ? weekOffUntil.toISOString().split('T')[0] : null
-  });
+  };
+  lsSet('weekoff_settings', _wos);
+  window._weekoffSnapshot = _wos;
 }
 
 function toggleWeekOff(pill) {
@@ -3170,7 +3190,8 @@ async function authForgot() {
 }
 
 // ===== DATABASE TAB =====
-let dbEntries = [];  // initialized in initUserStorage after login
+window.dbEntries = window.dbEntries || [];  // window global so module can write it
+let dbEntries = window.dbEntries;
 
 function showDbTab() {
   const modal = document.getElementById('dbModal');
@@ -3229,6 +3250,7 @@ function applyWeekOffToWeek(date) {
     }
   }
   lsSet('att_data', attData);
+  window.attData = attData;
   // Track this week as processed
   const processed = lsGet('att_processed_weeks', '{}');
   processed[getWeekId(date)] = JSON.stringify([...weekOffDays].sort());
@@ -3260,7 +3282,8 @@ function applyWeekOffUpToToday() {
 
 // ===== ATTENDANCE =====
 let attYear = new Date().getFullYear();
-let attData = {};  // initialized in initUserStorage after login
+window.attData = window.attData || {};  // window global so module can write it
+let attData = window.attData;
 let lpTargetKey = null;
 let lpClickCount = {};
 
@@ -3459,8 +3482,10 @@ function attCellClick(e, cell) {
 function setLeave(type) {
   if (!lpTargetKey) return;
   if (type === null) delete attData[lpTargetKey];
+  window.attData = attData;
   else attData[lpTargetKey] = type;
   lsSet('att_data', attData);
+  window.attData = attData;
   hideLeavePicker();
   renderAttCalendar();
 }
