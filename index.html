@@ -475,6 +475,34 @@
     .auth-card { width:95vw !important; }
     #settingsModal .settings-card { width:95vw !important; }
     .sec-header { font-size:9px !important; padding:2px 4px !important; }
+
+    /* ── MOBILE BOTTOM PANELS: 2×2 grid ── */
+    .four-grid {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 6px !important;
+    }
+    /* Card 3 (Remaining) and Card 4 (Today's Balance) each fill one column */
+    .four-grid .fg-cell:nth-child(3),
+    .four-grid .fg-cell:nth-child(4) {
+      grid-column: span 1;
+    }
+    .fg-cell .tcard-compact td, .fg-cell .tcard-compact th {
+      font-size: 9px !important;
+      padding: 3px 4px !important;
+      white-space: nowrap !important;
+    }
+    .fg-cell .tcard-compact td:first-child { width: 50% !important; }
+    .fg-btn { font-size: 8px !important; padding: 4px 3px !important; }
+    .fg-btns { gap: 4px !important; }
+
+    /* Copy buttons: 2×2 grid on mobile */
+    .copy-btn-row {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 5px !important;
+    }
+    .copy-btn-row button { font-size: 9px !important; padding: 6px 4px !important; }
   }
 </style>
 <script type="module">
@@ -576,9 +604,18 @@
     if (user) {
       document.getElementById('authOverlay').style.display = 'none';
       document.getElementById('mainApp').style.display = 'block';
-      const displayName = user.displayName || user.email.split('@')[0];
+      // First, show whatever Firebase Auth has immediately
+      let displayName = user.displayName || user.email.split('@')[0];
       const nameEl = document.getElementById('topNameSpan');
       if (nameEl) nameEl.textContent = displayName;
+      // Then try Firestore for the saved name (fixes race condition on sign-up)
+      try {
+        const uSnap = await getDoc(doc(db, 'users', user.uid));
+        if (uSnap.exists() && uSnap.data().name) {
+          displayName = uSnap.data().name;
+          if (nameEl) nameEl.textContent = displayName;
+        }
+      } catch(e) { /* silently ignore, fallback already set */ }
       initUserStorage(user.uid);
       await window.loadUserData(user.uid);
       if (window.recalc) window.recalc();
@@ -2323,6 +2360,9 @@ async function authSignUp() {
   try {
     const cred = await window._fbFns.createUserWithEmailAndPassword(window._fbAuth, email, password);
     await window._fbFns.updateProfile(cred.user, { displayName: name });
+    // Fix race condition: onAuthStateChanged fires before updateProfile finishes, so update top bar manually
+    const nameEl = document.getElementById('topNameSpan');
+    if (nameEl) nameEl.textContent = name;
     await window._fbFns.setDoc(window._fbFns.doc(window._fbDb, 'users', cred.user.uid), { name, email, username, createdAt: Date.now() });
   } catch(e) {
     const msgs = { 'auth/email-already-in-use': 'Email already registered.', 'auth/invalid-email': 'Invalid email address.', 'auth/weak-password': 'Password too weak.' };
