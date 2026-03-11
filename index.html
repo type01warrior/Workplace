@@ -158,7 +158,7 @@
     border-color: #333;
     box-shadow: 3px 3px 0 #111;
   }
-  body.dark .tcard td, body.dark .tcard th { border-color: #333; background-color: #1a1a1a; }
+  body.dark .tcard td, body.dark .tcard th { border-color: #1e1e1e; background-color: #0d0d0d; color: #ffffff; }
 
   /* ===== TOP BAR ===== */
   .top-bar {
@@ -171,7 +171,7 @@
     flex-wrap: nowrap;
     margin-bottom: 4px;
   }
-  body.dark .top-bar { background: #1a6ea8; }
+  body.dark .top-bar { background: #0d0d0d; border-bottom: 1px solid #1e1e1e; }
   .top-name {
     font-family: 'Lexend', sans-serif;
     font-weight: 700;
@@ -324,24 +324,24 @@
     --header-text: #000000;
   }
   body.dark {
-    --bg-page: #0d0d0d;
-    --bg-card: #1a1a1a;
-    --border: #333;
-    --text: #000000;
-    --bg-input: #2e2e2e;
+    --bg-page: #000000;
+    --bg-card: #0d0d0d;
+    --border: #1e1e1e;
+    --text: #ffffff;
+    --bg-input: #181818;
     --bg-red: #c0392b;
     --bg-blue: #1a6ea8;
-    --bg-gray: #2e2e2e;
-    --shadow: rgba(0,0,0,0.8);
-    --cell-bg: #222222;
-    --header-text: #000000;
+    --bg-gray: #111111;
+    --shadow: rgba(0,0,0,0.9);
+    --cell-bg: #0d0d0d;
+    --header-text: #ffffff;
   }
   body { background: var(--bg-page); color: var(--text); }
   .page { background: var(--bg-page); }
 
   /* All td/th get dark cell bg in dark mode */
   td, th { border-color: var(--border); color: var(--text); background-color: #ffffff; }
-  body.dark td, body.dark th { background-color: #1a1a1a; color: #e8e8e8; border-color: var(--border); }
+  body.dark td, body.dark th { background-color: #0d0d0d; color: #ffffff; border-color: var(--border); }
 
   /* Colored cells stay colored, text black */
   .bg-red  { background-color: var(--bg-red) !important; }
@@ -349,9 +349,9 @@
   .bg-gray { background-color: var(--bg-gray) !important; }
   body.dark .bg-red, body.dark td.bg-red  { background-color: var(--bg-red) !important; color: #000 !important; }
   body.dark .bg-blue, body.dark td.bg-blue { background-color: var(--bg-blue) !important; color: #000 !important; }
-  body.dark tr.bg-gray td { background-color: var(--bg-gray) !important; color: #e8e8e8 !important; }
+  body.dark tr.bg-gray td { background-color: transparent !important; color: #ffffff !important; }
   body.dark tr.total-used td { background-color: var(--bg-blue) !important; color: #000 !important; }
-  body.dark tr.total-balance td { background-color: var(--bg-red) !important; color: #000 !important; }
+  body.dark tr.total-balance td { background-color: #0d0d0d !important; color: #ffffff !important; border-top: 2px solid #c0392b !important; }
   body.dark tr.bg-red td { background-color: var(--bg-red) !important; color: #000 !important; }
 
   /* Input cells */
@@ -361,7 +361,7 @@
   body.dark td.input-cell { background: var(--bg-input) !important; }
   body.dark td.input-cell input { background: var(--bg-input) !important; color: #e8e8e8; }
   body.dark input.dur { background: var(--bg-input) !important; color: #e8e8e8; }
-  body.dark input[type="number"], body.dark input[type="time"], body.dark input[type="text"] { color: #e8e8e8; background: var(--bg-input); }
+  body.dark input[type="number"], body.dark input[type="time"], body.dark input[type="text"] { color: #ffffff; background: var(--bg-input); }
 
   /* Header elements */
   .name-badge { border-color: var(--border); color: var(--text); }
@@ -436,11 +436,11 @@
   .top-bar { flex-direction:column !important; gap:5px !important; padding:10px 10px 8px !important; }
   .tb-r1,.tb-r2,.tb-r3 { display:flex; align-items:center; width:100%; gap:5px; }
   .tb-username { font-family:'Lexend',sans-serif; font-size:16px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%; }
-  .tb-week { margin-left:auto; font-family:'Lexend',sans-serif; font-size:11px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
+  .tb-week { margin-left:auto; font-family:'Lexend',sans-serif; font-size:13px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
   .tb-btn2 { padding:4px 10px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; white-space:nowrap; }
   .tb-btn2-red { background:rgba(192,57,43,0.7) !important; }
-  .tb-time { margin-left:auto; font-family:'Lexend',sans-serif; font-size:10px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
-  .tb-wd { font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
+  .tb-time { margin-left:auto; font-family:'Lexend',sans-serif; font-size:13px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
+  .tb-wd { font-family:'Lexend',sans-serif; font-size:12px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
   .tb-r3 { gap:4px; }
   .tb-btn3 { flex:1; padding:4px 2px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:8px; cursor:pointer; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .tb-btn3-white { background:#fff !important; color:#1C2B3A !important; border:none !important; }
@@ -798,7 +798,7 @@
   .stat-row:last-child { border-bottom: none; }
   .stat-row:hover { background: #f6f9fc; }
   body.dark .stat-row { border-bottom-color: #1a2530; }
-  body.dark .stat-row:hover { background: #162030; }
+  body.dark .stat-row:hover { background: #181818; }
   .stat-label {
     font-family: 'Lexend', sans-serif;
     font-size: 9.5px;
@@ -819,7 +819,7 @@
     min-width: 52px;
     padding-left: 8px;
   }
-  body.dark .stat-val { color: #c8d8e8; }
+  body.dark .stat-val { color: #ffffff; }
   .stat-val.negative { color: #c0392b !important; }
   .stat-val.positive { color: #1a7a1a !important; }
   .stat-input-row {
@@ -1007,6 +1007,14 @@
       const el = document.getElementById(id);
       if (el) data[id] = el.value;
     });
+    // Save attendance + weekoff + db_snapshots using live in-memory globals
+    data['att_data'] = JSON.stringify(typeof attData !== 'undefined' ? attData : (window.attData || {}));
+    data['att_processed'] = JSON.stringify(typeof lsGet === 'function' ? lsGet('att_processed_weeks','{}') : {});
+    data['weekoff_settings'] = JSON.stringify(typeof weekOffDays !== 'undefined' ? {
+      days: [...weekOffDays],
+      until: typeof weekOffUntil !== 'undefined' && weekOffUntil ? weekOffUntil.toISOString().split('T')[0] : null
+    } : null);
+    data['db_snapshots'] = JSON.stringify(typeof dbEntries !== 'undefined' ? dbEntries : (window.dbEntries || []));
     try {
       await window._fbFns.setDoc(window._fbFns.doc(db, 'userData', user.uid), data, { merge: true });
     } catch(e) { console.warn('Save failed:', e); }
@@ -1052,6 +1060,55 @@
         const el = document.getElementById(id);
         if (el && data[id] !== undefined) el.value = data[id];
       });
+      // Restore attendance data from Firestore
+      if (data['att_data']) {
+        try {
+          const ad = JSON.parse(data['att_data']);
+          if (typeof ad === 'object' && ad !== null) {
+            attData = ad;
+            if (typeof lsSet === 'function') lsSet('att_data', ad);
+            // Re-render calendar if it's open
+            if (document.getElementById('attendanceModal')?.classList.contains('open')) {
+              if (typeof renderAttCalendar === 'function') renderAttCalendar();
+            }
+          }
+        } catch(e) {}
+      }
+      if (data['att_processed']) {
+        try {
+          const ap = JSON.parse(data['att_processed']);
+          if (ap && lsSet) lsSet('att_processed_weeks', ap);
+        } catch(e) {}
+      }
+      if (data['weekoff_settings']) {
+        try {
+          const wo = JSON.parse(data['weekoff_settings']);
+          if (wo) {
+            if (typeof lsSet === 'function') lsSet('weekoff_settings', wo);
+            // Apply weekoff directly to live state
+            if (typeof weekOffDays !== 'undefined' && wo.days) {
+              weekOffDays.clear();
+              wo.days.forEach(d => weekOffDays.add(d));
+              document.querySelectorAll('.wo-pill').forEach(p => {
+                p.classList.toggle('active', weekOffDays.has(p.dataset.day));
+              });
+              if (typeof updateWorkingDayRows === 'function') updateWorkingDayRows();
+            }
+            if (typeof weekOffUntil !== 'undefined' && wo.until) {
+              weekOffUntil = new Date(wo.until);
+            }
+          }
+        } catch(e) {}
+      }
+      if (data['db_snapshots']) {
+        try {
+          const ds = JSON.parse(data['db_snapshots']);
+          if (Array.isArray(ds)) {
+            dbEntries = ds;
+            if (lsSet) lsSet('db_snapshots', ds);
+          }
+        } catch(e) {}
+      }
       if (window.recalc) window.recalc();
     } catch(e) { console.warn('Load failed:', e); }
   };
@@ -1323,7 +1380,7 @@ body.dark .db-modal-header h4 { color: #e8e8e8; }
 .att-card {
   background: #fff; border: 1px solid #1C2B3A;
   box-shadow: 4px 4px 0 #1C2B3A; border-radius: 8px;
-  padding: 16px 18px; width: 96vw; max-width: 1300px;
+  padding: 16px 18px; width: 99vw; max-width: 1600px;
   margin-bottom: 40px;
 }
 body.dark .att-card { background: #1a1a1a; border-color: #333; box-shadow: 4px 4px 0 #000; }
@@ -1336,15 +1393,15 @@ body.dark .att-header h4 { color: #e8e8e8; }
 body.dark .att-year-label { color: #e8e8e8; }
 .att-calendar-wrap { overflow-x: auto; }
 .att-calendar { border-collapse: collapse; font-size: 8px; font-weight: 700; font-family: 'Lexend', sans-serif; }
-.att-calendar th, .att-calendar td { border: 1px solid #B0BCC8; padding: 1px 2px; text-align: center; white-space: nowrap; min-width: 22px; width: 22px; height: 18px; line-height: 1; }
+.att-calendar th, .att-calendar td { border: 1px solid #B0BCC8; padding: 1px 1px; text-align: center; white-space: nowrap; min-width: 18px; width: 18px; height: 16px; line-height: 1; font-size: 7px; }
 body.dark .att-calendar th, body.dark .att-calendar td { border-color: #3a3a3a; }
-.att-calendar thead th { background: #1C2B3A; color: #E8F0F8; font-size: 7.5px; padding: 2px 1px; }
+.att-calendar thead th { background: #1C2B3A; color: #E8F0F8; font-size: 6.5px; padding: 2px 1px; }
 .att-calendar th.week-end-th, .att-calendar td.week-end { border-right: 2px solid #1C2B3A !important; }
 body.dark .att-calendar th.week-end-th, body.dark .att-calendar td.week-end { border-right: 2px solid #6699bb !important; }
-.att-calendar th.year-header { background: #1C2B3A; color: #E8F0F8; font-size: 11px; font-weight: 700; padding: 4px; letter-spacing: 1px; }
-.att-month-label { background: #2E4A62 !important; color: #E8F0F8 !important; font-size: 8px !important; text-align: left !important; padding-left: 5px !important; min-width: 65px !important; width: 65px !important; }
+.att-calendar th.year-header { background: #1C2B3A; color: #E8F0F8; font-size: 9px; font-weight: 700; padding: 3px; letter-spacing: 1px; }
+.att-month-label { background: #2E4A62 !important; color: #E8F0F8 !important; font-size: 7.5px !important; text-align: left !important; padding-left: 4px !important; min-width: 48px !important; width: 48px !important; font-weight: 700 !important; }
 body.dark .att-month-label { background: #1a3a5c !important; }
-.att-cell { cursor: pointer; background: #EAF1F8; transition: background 0.15s; font-size: 8px; }
+.att-cell { cursor: pointer; background: #EAF1F8; transition: background 0.15s; font-size: 7px; }
 body.dark .att-cell { background: #222; color: #e8e8e8; }
 .att-cell:hover { background: #c8dff5 !important; }
 body.dark .att-cell:hover { background: #1a3a5c !important; }
@@ -1418,13 +1475,14 @@ body.dark .lp-clear { border-color: #333; }
 .db-entry-header {
   background: #1C2B3A;
   color: #E8F0F8;
-  padding: 4px 8px;
-  font-size: 9px;
+  padding: 7px 12px;
+  font-size: 12px;
   font-weight: 700;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
+  border-radius: 6px 6px 0 0;
 }
 .db-entry-header .db-del {
   cursor: pointer;
@@ -1668,7 +1726,8 @@ body.dark .db-entry { border-color: #333; }
       <span class="pill-option" id="pill-dark">🌙 Dark</span>
     </div>
     <button onclick="syncData()" id="syncBtn" class="tb-btn2">☁ SYNC</button>
-    <button onclick="authSignOut()" class="tb-btn2 tb-btn2-red">⏻ LOGOUT</button>
+    <button onclick="refreshFromCloud()" id="refreshBtn" class="tb-btn2">⟳ REFRESH</button>
+    <button onclick="authSignOut()" class="tb-btn2 tb-btn2-red">⏏ LOGOUT</button>
     <span class="tb-time" id="timeNow"></span>
     <span class="tb-wd">WD:<strong id="workingDays">5</strong></span>
   </div>
@@ -1676,7 +1735,8 @@ body.dark .db-entry { border-color: #333; }
     <button onclick="showDbTab()" id="dbTabBtn" class="tb-btn3">DATABASE</button>
     <button onclick="pushToDatabase()" class="tb-btn3">⬆ PUSH TO DB</button>
     <button onclick="openAttendance()" class="tb-btn3">📅 ATTENDANCE</button>
-    <button onclick="resetAllFields()" class="tb-btn3 tb-btn3-white">↺ RESET</button>
+    <button onclick="(_snapshotState('Before Reset'),resetAllFields())" class="tb-btn3 tb-btn3-white">↺ RESET</button>
+    <button onclick="undoLastAction()" id="undoBtn" class="tb-btn3" style="opacity:0.4;" disabled>↩ UNDO</button>
     <button onclick="openSettings()" class="tb-btn3">⚙ SETTINGS</button>
   </div>
 </div>
@@ -1699,6 +1759,8 @@ body.dark .db-entry { border-color: #333; }
   </div>
 </div>
 
+
+<div id="undoToast" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1C2B3A;color:#E8F0F8;padding:8px 18px;border-radius:20px;font-family:'Lexend',sans-serif;font-size:10px;font-weight:700;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.3);">↩ Undone</div>
 
 <!-- ======== DATABASE MODAL ======== -->
 <div id="dbModal">
@@ -1727,7 +1789,7 @@ body.dark .db-entry { border-color: #333; }
           <button onclick="attChangeYear(1)">▶</button>
         </div>
         <button onclick="exportAttendancePDF()" style="padding:3px 10px;font-family:'Lexend',sans-serif;font-size:8px;font-weight:700;background:#1C2B3A;color:#E8F0F8;border:none;border-radius:6px;cursor:pointer;">📄 EXPORT PDF</button>
-        <button onclick="closeAttendance()" style="padding:2px 8px;font-family:'Lexend',sans-serif;font-size:8px;font-weight:700;background:transparent;color:#1C2B3A;border:1px solid #1C2B3A;border-radius:6px;cursor:pointer;">✕ CLOSE</button>
+        <button onclick="closeAttendance()" id="attCloseBtn" style="padding:4px 12px;font-family:'Lexend',sans-serif;font-size:9px;font-weight:700;background:rgba(192,57,43,0.15);color:#c0392b;border:1.5px solid #c0392b;border-radius:6px;cursor:pointer;">✕ CLOSE</button>
       </div>
     </div>
     <div class="att-calendar-wrap">
@@ -2421,6 +2483,95 @@ function toggleObPill(pill) {
   }
 }
 
+let _userShift = localStorage.getItem('userShift') || 'morning';
+
+function selectObShift(shift) {
+  _userShift = shift;
+  const mBtn = document.getElementById('ob-shift-morning');
+  const eBtn = document.getElementById('ob-shift-evening');
+  if (!mBtn || !eBtn) return;
+  if (shift === 'morning') {
+    mBtn.style.background='#1C2B3A'; mBtn.style.color='#fff';
+    eBtn.style.background='#fff'; eBtn.style.color='#1C2B3A';
+  } else {
+    eBtn.style.background='#1C2B3A'; eBtn.style.color='#fff';
+    mBtn.style.background='#fff'; mBtn.style.color='#1C2B3A';
+  }
+}
+
+// ── SPLIT-ENTRY POPUP (double-click on dur input for evening shift) ──
+function openSplitPopup(inputEl) {
+  // Remove old popup if exists
+  const old = document.getElementById('splitPopup');
+  if (old) old.remove();
+
+  const curVal = inputEl.value || '00:00';
+  const label = inputEl.closest('tr')?.querySelector('td.left')?.textContent?.trim() || inputEl.id;
+  const fieldName = inputEl.id.split('_')[0].toUpperCase();
+
+  const popup = document.createElement('div');
+  popup.id = 'splitPopup';
+  popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:2px solid #1C2B3A;border-radius:12px;padding:20px 24px;z-index:99999;min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,0.25);font-family:Lexend,sans-serif;';
+  popup.innerHTML = `
+    <div style="font-size:11px;font-weight:700;color:#1C2B3A;margin-bottom:14px;letter-spacing:0.5px;">${label} — ${fieldName} <span style="font-weight:400;color:#888;font-size:9px;">Split across midnight</span></div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:9px;font-weight:700;color:#888;display:block;margin-bottom:4px;">BEFORE 12:00 AM</label>
+      <input id="split-before" type="text" placeholder="HH:MM" maxlength="5"
+        style="width:100%;padding:8px 10px;border:1.5px solid #ccd6e0;border-radius:8px;font-family:Lexend,sans-serif;font-size:13px;font-weight:700;box-sizing:border-box;outline:none;" oninput="fmtDurInput(this);splitCalcTotal()">
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:9px;font-weight:700;color:#888;display:block;margin-bottom:4px;">AFTER 12:00 AM (next day)</label>
+      <input id="split-after" type="text" placeholder="HH:MM" maxlength="5"
+        style="width:100%;padding:8px 10px;border:1.5px solid #ccd6e0;border-radius:8px;font-family:Lexend,sans-serif;font-size:13px;font-weight:700;box-sizing:border-box;outline:none;" oninput="fmtDurInput(this);splitCalcTotal()">
+    </div>
+    <div id="split-total" style="text-align:center;font-size:13px;font-weight:700;color:#1C2B3A;background:#f0f6fc;border-radius:8px;padding:8px;margin-bottom:14px;">Total: –</div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeSplitPopup()" style="flex:1;padding:8px;font-family:Lexend,sans-serif;font-size:10px;font-weight:700;background:transparent;border:1.5px solid #ccd6e0;border-radius:8px;cursor:pointer;color:#888;">Cancel</button>
+      <button onclick="applySplitPopup('${inputEl.id}')" style="flex:2;padding:8px;font-family:Lexend,sans-serif;font-size:10px;font-weight:700;background:#1C2B3A;color:#fff;border:none;border-radius:8px;cursor:pointer;">✓ Update</button>
+    </div>`;
+  document.body.appendChild(popup);
+  document.getElementById('split-before').focus();
+}
+
+function splitCalcTotal() {
+  function pm(v) {
+    if (!v || v==='00:00') return 0;
+    const p=v.split(':'); return (parseInt(p[0])||0)*60+(parseInt(p[1])||0);
+  }
+  const b = pm(document.getElementById('split-before')?.value||'');
+  const a = pm(document.getElementById('split-after')?.value||'');
+  const tot = b + a;
+  const h = Math.floor(tot/60), m = tot%60;
+  const el = document.getElementById('split-total');
+  if (el) el.textContent = tot > 0 ? `Total: ${h}:${String(m).padStart(2,'0')}` : 'Total: –';
+}
+
+function applySplitPopup(inputId) {
+  function pm(v) {
+    if (!v || v==='00:00') return 0;
+    const p=v.split(':'); return (parseInt(p[0])||0)*60+(parseInt(p[1])||0);
+  }
+  const b = pm(document.getElementById('split-before')?.value||'');
+  const a = pm(document.getElementById('split-after')?.value||'');
+  const tot = b + a;
+  if (tot === 0) { closeSplitPopup(); return; }
+  const h = Math.floor(tot/60), m = tot%60;
+  const el = document.getElementById(inputId);
+  if (el) { el.value = `${h}:${String(m).padStart(2,'0')}`; recalc(); window.saveUserData && window.saveUserData(); }
+  closeSplitPopup();
+}
+
+function closeSplitPopup() {
+  const p = document.getElementById('splitPopup');
+  if (p) p.remove();
+}
+
+// Close split popup on backdrop click
+document.addEventListener('click', function(e) {
+  const popup = document.getElementById('splitPopup');
+  if (popup && !popup.contains(e.target) && !e.target.classList.contains('dur')) closeSplitPopup();
+});
+
 function saveOnboarding() {
   const prod  = parseInt(document.getElementById('ob-prod').value)  || 0;
   const coach = parseInt(document.getElementById('ob-coach').value) || 0;
@@ -2451,6 +2602,7 @@ function saveOnboarding() {
   // Apply WO to attendance calendar up to until date
   try { applyWeekOffUpToToday(); } catch(e) {}
 
+  localStorage.setItem('userShift', _userShift);
   document.getElementById('onboardingModal').classList.remove('open');
   window.saveUserData();
   if (window.recalc) window.recalc();
@@ -2542,8 +2694,63 @@ async function confirmDeleteAccount() {
   }
 }
 
+// ===== UNDO SYSTEM =====
+const _undoStack = [];  // stack of {fields, description}
+
+function _snapshotState(desc) {
+  const days = ['sun','mon','tue','wed','thu'];
+  const durFields = ['prod','coach','meet','well','break','unavail'];
+  const snap = { desc, fields: {} };
+  days.forEach(d => {
+    durFields.forEach(f => {
+      const el = document.getElementById(`${f}_${d}`);
+      if (el) snap.fields[`${f}_${d}`] = el.value;
+    });
+    const chk = document.getElementById(`chk_${d}`);
+    if (chk) snap.fields[`chk_${d}`] = chk.checked;
+    const jobs = document.getElementById(`jobs_${d}`);
+    if (jobs) snap.fields[`jobs_${d}`] = jobs.value;
+  });
+  _undoStack.push(snap);
+  if (_undoStack.length > 20) _undoStack.shift(); // keep last 20
+  _updateUndoBtn();
+}
+
+function undoLastAction() {
+  if (_undoStack.length === 0) return;
+  const snap = _undoStack.pop();
+  Object.entries(snap.fields).forEach(([key, val]) => {
+    const el = document.getElementById(key);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = val;
+    else el.value = val;
+  });
+  recalc();
+  window.saveUserData && window.saveUserData();
+  _updateUndoBtn();
+  // Show toast
+  const t = document.getElementById('undoToast');
+  if (t) { t.textContent = `↩ Undid: ${snap.desc}`; t.style.display='block'; setTimeout(()=>t.style.display='none',2200); }
+}
+
+function _updateUndoBtn() {
+  const btn = document.getElementById('undoBtn');
+  if (!btn) return;
+  btn.disabled = _undoStack.length === 0;
+  btn.style.opacity = _undoStack.length === 0 ? '0.4' : '1';
+}
+
+// Ctrl+Z / Cmd+Z global undo
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+    e.preventDefault();
+    undoLastAction();
+  }
+});
+
 // ===== RESET ALL FIELDS =====
 function resetAllFields() {
+  _snapshotState('Reset All');
   const days = ['sun','mon','tue','wed','thu'];
   const durFields = ['prod','coach','meet','well','break','unavail'];
   days.forEach(d => {
@@ -2774,8 +2981,35 @@ window.addEventListener('load', () => {
   updateClock();
   setInterval(() => { updateClock(); }, 1000);
   setInterval(() => { recalc(); }, 60000);
-  // auto-save on any input
-  document.querySelectorAll("input").forEach(el => el.addEventListener("change", () => { if(window.saveUserData) window.saveUserData(); }));
+
+  // Load saved shift
+  _userShift = localStorage.getItem('userShift') || 'morning';
+
+  // Attach double-click split popup to all .dur inputs (any shift can use it)
+  document.querySelectorAll('input.dur').forEach(inp => {
+    let _dblClickTimer = null;
+    inp.addEventListener('dblclick', function(e) {
+      e.preventDefault();
+      openSplitPopup(this);
+    });
+  });
+  // auto-save on any input change (debounced 1.5s to avoid hammering Firestore)
+  let _autoSaveTimer = null;
+  function debouncedSave() {
+    clearTimeout(_autoSaveTimer);
+    _autoSaveTimer = setTimeout(() => { if(window.saveUserData) window.saveUserData(); }, 1500);
+  }
+  document.addEventListener('change', debouncedSave);
+  document.addEventListener('input', debouncedSave);
+  // Snapshot for undo on meaningful input changes
+  document.querySelectorAll('.dur, input[type="number"]').forEach(inp => {
+    inp.addEventListener('focus', function() {
+      this._preVal = this.value;
+    });
+    inp.addEventListener('blur', function() {
+      if (this.value !== this._preVal) _snapshotState && _snapshotState('Edit ' + (this.id || 'field'));
+    });
+  });
 });
 
 // ===== HISTORY API — Back button closes modals instead of leaving the page =====
@@ -2818,6 +3052,33 @@ window.addEventListener('popstate', (e) => {
 
 // Push an initial base state so the very first back press hits popstate
 history.pushState(null, '', '');
+
+
+// ===== ENTER KEY NAVIGATION (→ next, Shift+Enter ← prev) =====
+(function() {
+  const NAV_ORDER = [
+    'prod_sun','coach_sun','meet_sun','well_sun','break_sun','unavail_sun','jobs_sun',
+    'prod_mon','coach_mon','meet_mon','well_mon','break_mon','unavail_mon','jobs_mon',
+    'prod_tue','coach_tue','meet_tue','well_tue','break_tue','unavail_tue','jobs_tue',
+    'prod_wed','coach_wed','meet_wed','well_wed','break_wed','unavail_wed','jobs_wed',
+    'prod_thu','coach_thu','meet_thu','well_thu','break_thu','unavail_thu','jobs_thu',
+  ];
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+    const active = document.activeElement;
+    if (!active || (!active.classList.contains('dur') && active.type !== 'number')) return;
+    const idx = NAV_ORDER.indexOf(active.id);
+    if (idx === -1) return;
+    e.preventDefault();
+    const next = e.shiftKey
+      ? NAV_ORDER[idx - 1]
+      : NAV_ORDER[idx + 1];
+    if (!next) return;
+    const el = document.getElementById(next);
+    if (el && !el.disabled) { el.focus(); el.select && el.select(); }
+  });
+})();
 
 // ===== AUTH FUNCTIONS =====
 function authShowTab(tab) {
@@ -3404,7 +3665,7 @@ function renderDbEntries() {
       const color = parseFloat(acc.accPct) >= 98 ? '#93C47D' : '#ff8a8a';
       accHtml = `&nbsp;|&nbsp; 🎯 <span title="Double-click to edit accuracy" ondblclick="openAccuracyModal(${idx})" style="cursor:pointer;padding:1px 5px;border-radius:3px;border:1px dashed #aaa;">Accuracy: <span style="color:${color};font-weight:700;">${acc.accPct}%</span> &nbsp; Error Rate: ${acc.errPct}%</span>`;
     } else {
-      accHtml = `&nbsp;|&nbsp; <span onclick="openAccuracyModal(${idx})" style="cursor:pointer;color:#f6b26b;font-weight:700;font-size:9px;padding:1px 6px;border:1px dashed #f6b26b;border-radius:3px;">+ ADD ACCURACY</span>`;
+      accHtml = `&nbsp;|&nbsp; <span onclick="openAccuracyModal(${idx})" style="cursor:pointer;color:#f6b26b;font-weight:700;font-size:11px;padding:2px 8px;border:1px dashed #f6b26b;border-radius:4px;">+ ADD ACCURACY</span>`;
     }
     return `
     <div class="db-entry">
@@ -3446,19 +3707,46 @@ function clearAllDb() {
   renderDbEntries();
 }
 
-// ===== SYNC FUNCTION =====
+// ===== SYNC (SAVE to cloud) =====
 async function syncData() {
   const btn = document.getElementById('syncBtn');
-  btn.textContent = '↻ SYNCING...';
+  btn.textContent = '↑ SAVING...';
   btn.style.opacity = '0.6';
+  btn.disabled = true;
   try {
     await window.saveUserData();
-    btn.textContent = '✓ SYNCED';
-    setTimeout(() => { btn.textContent = '☁ SYNC'; btn.style.opacity = '1'; }, 2000);
+    btn.textContent = '✓ SAVED';
+    btn.style.color = '#90ee90';
+    setTimeout(() => { btn.textContent = '☁ SYNC'; btn.style.opacity = '1'; btn.style.color = '#E8F0F8'; btn.disabled = false; }, 2000);
   } catch(e) {
     btn.textContent = '✗ FAILED';
     btn.style.color = '#ffaaaa';
+    btn.disabled = false;
     setTimeout(() => { btn.textContent = '☁ SYNC'; btn.style.opacity = '1'; btn.style.color = '#E8F0F8'; }, 2500);
+  }
+}
+
+// ===== REFRESH (LOAD from cloud) =====
+async function refreshFromCloud() {
+  const btn = document.getElementById('refreshBtn');
+  btn.textContent = '↓ LOADING...';
+  btn.style.opacity = '0.6';
+  btn.disabled = true;
+  try {
+    const user = window._fbAuth && window._fbAuth.currentUser;
+    if (!user) throw new Error('Not logged in');
+    await window.loadUserData(user.uid);
+    if (window.recalc) window.recalc();
+    // Re-render db entries
+    if (typeof renderDbEntries === 'function') renderDbEntries();
+    btn.textContent = '✓ REFRESHED';
+    btn.style.color = '#90ee90';
+    setTimeout(() => { btn.textContent = '⟳ REFRESH'; btn.style.opacity = '1'; btn.style.color = '#E8F0F8'; btn.disabled = false; }, 2000);
+  } catch(e) {
+    btn.textContent = '✗ FAILED';
+    btn.style.color = '#ffaaaa';
+    btn.disabled = false;
+    setTimeout(() => { btn.textContent = '⟳ REFRESH'; btn.style.opacity = '1'; btn.style.color = '#E8F0F8'; }, 2500);
   }
 }
 
@@ -3638,6 +3926,14 @@ function authSignOut() {
       <label>WEEKOFF VALID UNTIL <span style="font-weight:400;font-size:8px;color:#888;">(shift rotation end date)</span></label>
       <input type="date" id="ob-until" style="font-family:'Lexend',sans-serif;font-size:11px;padding:7px 10px;border:1px solid #1C2B3A;border-radius:4px;width:100%;box-sizing:border-box;">
       <div class="hint">After this date, weekoff will stop auto-marking. Leave blank for no expiry.</div>
+    </div>
+    <div class="onboard-row">
+      <label>YOUR SHIFT</label>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button type="button" id="ob-shift-morning" onclick="selectObShift('morning')" style="flex:1;padding:8px;font-family:'Lexend',sans-serif;font-size:10px;font-weight:700;border:2px solid #1C2B3A;border-radius:6px;background:#1C2B3A;color:#fff;cursor:pointer;">🌅 Morning<br><span style="font-size:8px;font-weight:400;">6:00 AM – 3:30 PM</span></button>
+        <button type="button" id="ob-shift-evening" onclick="selectObShift('evening')" style="flex:1;padding:8px;font-family:'Lexend',sans-serif;font-size:10px;font-weight:700;border:2px solid #1C2B3A;border-radius:6px;background:#fff;color:#1C2B3A;cursor:pointer;">🌙 Evening<br><span style="font-size:8px;font-weight:400;">4:00 PM – 1:30 AM</span></button>
+      </div>
+      <div class="hint">Evening shift workers can split entry across midnight.</div>
     </div>
     <div class="onboard-err" id="ob-err"></div>
     <button class="onboard-save-btn" onclick="saveOnboarding()">LET'S GO →</button>
