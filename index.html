@@ -1009,11 +1009,12 @@
       const el = document.getElementById(id);
       if (el) data[id] = el.value;
     });
-    // Save attendance + weekoff + db_snapshots — use window globals (module scope ≠ outer scope)
-    data['att_data'] = JSON.stringify(window.attData || {});
-    data['att_processed'] = JSON.stringify(window._attProcessed || {});
-    data['weekoff_settings'] = JSON.stringify(window._weekoffSnapshot || null);
-    data['db_snapshots'] = JSON.stringify(window.dbEntries || []);
+    // Save attendance + weekoff + db_snapshots via _getLocalData callback
+    const _ld = typeof window._getLocalData === 'function' ? window._getLocalData() : {};
+    data['att_data'] = JSON.stringify(_ld.attData || {});
+    data['att_processed'] = JSON.stringify(_ld.attProcessed || {});
+    data['weekoff_settings'] = JSON.stringify(_ld.weekoff || null);
+    data['db_snapshots'] = JSON.stringify(_ld.dbEntries || []);
     try {
       await window._fbFns.setDoc(window._fbFns.doc(db, 'userData', user.uid), data, { merge: true });
     } catch(e) { console.warn('Save failed:', e); }
@@ -1060,17 +1061,9 @@
         if (el && data[id] !== undefined) el.value = data[id];
       });
       // Restore attendance data from Firestore
-      if (data['att_data']) {
-        try {
-          const ad = JSON.parse(data['att_data']);
-          if (typeof ad === 'object' && ad !== null) {
-            window.attData = ad;  // write to window so regular script sees it
-            if (typeof lsSet === 'function') lsSet('att_data', ad);
-            if (document.getElementById('attendanceModal')?.classList.contains('open')) {
-              if (typeof renderAttCalendar === 'function') renderAttCalendar();
-            }
-          }
-        } catch(e) {}
+      // Apply all cloud data via window callback (avoids module scope vs regular scope issues)
+      if (typeof window._applyCloudData === 'function') {
+        window._applyCloudData(data);
       }
       if (data['att_processed']) {
         try {
@@ -1078,33 +1071,8 @@
           if (ap && lsSet) lsSet('att_processed_weeks', ap);
         } catch(e) {}
       }
-      if (data['weekoff_settings']) {
-        try {
-          const wo = JSON.parse(data['weekoff_settings']);
-          if (wo) {
-            window._weekoffSnapshot = wo;
-            if (typeof lsSet === 'function') lsSet('weekoff_settings', wo);
-            if (wo.days) {
-              if (window.weekOffDays) { window.weekOffDays.clear(); wo.days.forEach(d => window.weekOffDays.add(d)); }
-              document.querySelectorAll('.wo-pill').forEach(p => {
-                p.classList.toggle('active', wo.days.includes(p.dataset.day));
-              });
-              if (typeof updateWorkingDayRows === 'function') updateWorkingDayRows();
-            }
-            if (wo.until && window.weekOffUntil !== undefined) window.weekOffUntil = new Date(wo.until);
-          }
-        } catch(e) {}
-      }
-      if (data['db_snapshots']) {
-        try {
-          const ds = JSON.parse(data['db_snapshots']);
-          if (Array.isArray(ds)) {
-            window.dbEntries = ds;  // write to window so regular script sees it
-            if (typeof lsSet === 'function') lsSet('db_snapshots', ds);
-            if (typeof renderDbEntries === 'function') renderDbEntries();
-          }
-        } catch(e) {}
-      }
+
+
       window._dataLoaded = true;
       if (window.recalc) window.recalc();
     } catch(e) { console.warn('Load failed:', e); }
@@ -2892,9 +2860,7 @@ function initUserStorage(uid) {
   _currentUid = uid;
   // Re-init attData and dbEntries from this user's scoped keys
   attData = lsGet('att_data', '{}');
-  window.attData = attData;
   dbEntries = lsGet('db_snapshots', '[]');
-  window.dbEntries = dbEntries;
   // Load weekoff settings
   const wo = lsGet('weekoff_settings', 'null');
   if (wo) {
@@ -2994,6 +2960,61 @@ function updateClock() {
 }
 
 // Init
+// ===== CLOUD DATA APPLY (called from module after Firestore load) =====
+window._applyCloudData = function(data) {
+  // attendance
+  if (data['att_data']) {
+    try {
+      const ad = JSON.parse(data['att_data']);
+      if (typeof ad === 'object' && ad !== null) {
+        attData = ad;   // update the LOCAL let binding directly
+        lsSet('att_data', ad);
+        if (document.getElementById('attendanceModal')?.classList.contains('open')) {
+          if (typeof renderAttCalendar === 'function') renderAttCalendar();
+        }
+      }
+    } catch(e) {}
+  }
+  // db snapshots
+  if (data['db_snapshots']) {
+    try {
+      const ds = JSON.parse(data['db_snapshots']);
+      if (Array.isArray(ds) && ds.length > 0) {
+        dbEntries = ds;  // update LOCAL let binding
+        lsSet('db_snapshots', ds);
+        if (typeof renderDbEntries === 'function') renderDbEntries();
+      }
+    } catch(e) {}
+  }
+  // weekoff settings
+  if (data['weekoff_settings']) {
+    try {
+      const wo = JSON.parse(data['weekoff_settings']);
+      if (wo) {
+        lsSet('weekoff_settings', wo);
+        if (wo.days) {
+          weekOffDays = new Set(wo.days);
+          document.querySelectorAll('.wo-pill').forEach(p => {
+            p.classList.toggle('active', weekOffDays.has(p.dataset.day));
+          });
+          if (typeof updateWorkingDayRows === 'function') updateWorkingDayRows();
+        }
+        if (wo.until) weekOffUntil = new Date(wo.until);
+      }
+    } catch(e) {}
+  }
+};
+
+// ===== SAVE HELPER — read live locals for module to use =====
+window._getLocalData = function() {
+  return {
+    attData: attData,
+    dbEntries: dbEntries,
+    weekoff: weekOffDays ? { days: [...weekOffDays], until: weekOffUntil ? weekOffUntil.toISOString().split('T')[0] : null } : null,
+    attProcessed: typeof lsGet === 'function' ? lsGet('att_processed_weeks', '{}') : {}
+  };
+};
+
 window.addEventListener('load', () => {
   // Restore dark mode
   if (localStorage.getItem('dmMode') === 'dark') {
@@ -3248,8 +3269,7 @@ async function authForgot() {
 }
 
 // ===== DATABASE TAB =====
-window.dbEntries = [];  // will be populated by initUserStorage after login
-let dbEntries = window.dbEntries;
+let dbEntries = [];  // local — kept in sync with localStorage via initUserStorage
 
 function showDbTab() {
   const modal = document.getElementById('dbModal');
@@ -3308,7 +3328,6 @@ function applyWeekOffToWeek(date) {
     }
   }
   lsSet('att_data', attData);
-  window.attData = attData;
   // Track this week as processed
   const processed = lsGet('att_processed_weeks', '{}');
   processed[getWeekId(date)] = JSON.stringify([...weekOffDays].sort());
@@ -3340,8 +3359,7 @@ function applyWeekOffUpToToday() {
 
 // ===== ATTENDANCE =====
 let attYear = new Date().getFullYear();
-window.attData = {};  // will be populated by initUserStorage after login
-let attData = window.attData;
+let attData = {};  // local — kept in sync with localStorage via initUserStorage
 let lpTargetKey = null;
 let lpClickCount = {};
 
@@ -3540,10 +3558,8 @@ function attCellClick(e, cell) {
 function setLeave(type) {
   if (!lpTargetKey) return;
   if (type === null) delete attData[lpTargetKey];
-  window.attData = attData;
   else attData[lpTargetKey] = type;
   lsSet('att_data', attData);
-  window.attData = attData;
   hideLeavePicker();
   renderAttCalendar();
 }
