@@ -2462,10 +2462,12 @@ function openDeleteAccountModal() {
   document.getElementById('del-err').textContent = '';
   document.getElementById('del-confirm-btn').disabled = true;
   document.getElementById('deleteAccountModal').classList.add('open');
+  _modalPush('deleteAccount');
 }
 
 function closeDeleteAccountModal() {
   document.getElementById('deleteAccountModal').classList.remove('open');
+  _modalPop();
 }
 
 function checkDelReady() {
@@ -2775,6 +2777,48 @@ window.addEventListener('load', () => {
   // auto-save on any input
   document.querySelectorAll("input").forEach(el => el.addEventListener("change", () => { if(window.saveUserData) window.saveUserData(); }));
 });
+
+// ===== HISTORY API — Back button closes modals instead of leaving the page =====
+// Track a stack of open modals so nested ones work correctly
+const _modalStack = [];
+
+function _modalPush(name) {
+  _modalStack.push(name);
+  history.pushState({ modal: name }, '', '');
+}
+
+function _modalPop() {
+  _modalStack.pop();
+}
+
+// Map modal name → close function
+function _closeTopModal(name) {
+  switch (name) {
+    case 'settings':        closeSettings();           break;
+    case 'attendance':      closeAttendance();         break;
+    case 'db':              showDbTab();               break; // showDbTab toggles
+    case 'pushConfirm':     closePushConfirm();        break;
+    case 'accuracy':        closeAccuracyModal();      break;
+    case 'deleteAccount':   closeDeleteAccountModal(); break;
+    case 'onboarding':      /* don't close onboarding on back */ break;
+    default: break;
+  }
+}
+
+window.addEventListener('popstate', (e) => {
+  // If a modal is tracked, close the top one; don't navigate away
+  if (_modalStack.length > 0) {
+    const top = _modalStack[_modalStack.length - 1];
+    _closeTopModal(top);
+    // _modalPop is called inside each close function via _modalPop()
+  }
+  // Always push a blank base state so subsequent back presses keep working
+  history.pushState(null, '', '');
+});
+
+// Push an initial base state so the very first back press hits popstate
+history.pushState(null, '', '');
+
 // ===== AUTH FUNCTIONS =====
 function authShowTab(tab) {
   document.getElementById('form-signin').style.display = tab === 'signin' ? '' : 'none';
@@ -2871,9 +2915,11 @@ function showDbTab() {
   const modal = document.getElementById('dbModal');
   if (modal.classList.contains('open')) {
     modal.classList.remove('open');
+    _modalPop();
   } else {
     modal.classList.add('open');
     renderDbEntries();
+    _modalPush('db');
   }
 }
 
@@ -2965,10 +3011,12 @@ function openAttendance() {
   try { applyWeekOffUpToToday(); } catch(e) { console.warn('Weekoff auto-apply error:', e); }
   try { renderAttCalendar(); } catch(e) { console.error('Calendar render error:', e); }
   document.getElementById('attendanceModal').classList.add('open');
+  _modalPush('attendance');
 }
 
 function closeAttendance() {
   document.getElementById('attendanceModal').classList.remove('open');
+  _modalPop();
   hideLeavePicker();
 }
 
@@ -3174,10 +3222,12 @@ function pushToDatabase() {
   const weekLabel = document.getElementById('weekLabelBar')?.textContent || 'this week\'s';
   document.getElementById('confirmWeekLabel').textContent = weekLabel;
   document.getElementById('pushConfirmModal').classList.add('open');
+  _modalPush('pushConfirm');
 }
 
 function closePushConfirm() {
   document.getElementById('pushConfirmModal').classList.remove('open');
+  _modalPop();
 }
 
 let _editAccuracyIdx = null; // null = new push, number = editing existing entry
@@ -3200,10 +3250,12 @@ function openAccuracyModal(editIdx) {
   document.getElementById('accSaveBtn').disabled = false;
   document.getElementById('accSaveBtn').style.opacity = '1';
   document.getElementById('accuracyModal').classList.add('open');
+  _modalPush('accuracy');
 }
 
 function closeAccuracyModal() {
   document.getElementById('accuracyModal').classList.remove('open');
+  _modalPop();
   _editAccuracyIdx = null;
 }
 
@@ -3425,6 +3477,7 @@ async function openSettings() {
     }
   } catch(e) {}
   document.getElementById('settingsModal').classList.add('open');
+  _modalPush('settings');
   // Pre-fill billing & count
   document.getElementById('set-q-prod').value  = document.getElementById('q_prod').value;
   document.getElementById('set-q-coach').value = document.getElementById('q_coach').value;
@@ -3435,6 +3488,7 @@ async function openSettings() {
 
 function closeSettings() {
   document.getElementById('settingsModal').classList.remove('open');
+  _modalPop();
   ['set-profile-msg','set-email-msg','set-pass-msg'].forEach(id => document.getElementById(id).textContent = '');
 }
 
