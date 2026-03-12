@@ -792,7 +792,8 @@
     padding: 7px 12px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 0;
   }
   body.dark .stat-panel-header { background: #0d1822; }
   .stat-panel-title {
@@ -806,7 +807,8 @@
   .stat-panel-cols {
     display: flex;
     gap: 0;
-    margin-left: 0;
+    margin-left: auto;
+    flex-shrink: 0;
   }
   .stat-panel-col-label {
     font-family: 'Lexend', sans-serif;
@@ -815,9 +817,11 @@
     letter-spacing: 0.7px;
     text-transform: uppercase;
     color: #ffffff;
-    padding: 0 8px;
     min-width: 52px;
+    width: 52px;
+    padding-left: 8px;
     text-align: left;
+    box-sizing: border-box;
   }
   .stat-row {
     display: flex;
@@ -1000,6 +1004,37 @@
     .tb-week-mobile { display:none !important; }
     .tb-logout-badge { display:inline-flex !important; }
   }
+
+  /* ── App Tour ── */
+  #appTour { display:none; position:fixed; inset:0; z-index:99998; pointer-events:none; }
+  #appTour.active { display:block; }
+  #appTour-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:99998; }
+  #appTour-card {
+    position:fixed; z-index:99999; pointer-events:all;
+    background:#fff; border:2px solid #1C2B3A; border-radius:14px;
+    padding:20px 24px; max-width:320px; width:90vw;
+    box-shadow:0 12px 40px rgba(0,0,0,0.4);
+    font-family:'Lexend',sans-serif;
+    bottom: 80px; left: 50%; transform: translateX(-50%);
+    transition: opacity 0.2s;
+  }
+  body.dark #appTour-card { background:#1a1a1a; border-color:#333; }
+  #appTour-step { font-size:8px; font-weight:700; color:#888; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+  #appTour-icon { font-size:28px; margin-bottom:8px; display:block; }
+  #appTour-title { font-size:13px; font-weight:700; color:#1C2B3A; margin-bottom:6px; }
+  body.dark #appTour-title { color:#e8e8e8; }
+  #appTour-body { font-size:10px; color:#556; line-height:1.6; margin-bottom:16px; }
+  body.dark #appTour-body { color:#9ab; }
+  .tour-progress { display:flex; gap:4px; margin-bottom:14px; }
+  .tour-dot { width:6px; height:6px; border-radius:50%; background:#dde; transition:background 0.2s; }
+  .tour-dot.active { background:#1C2B3A; }
+  body.dark .tour-dot { background:#333; }
+  body.dark .tour-dot.active { background:#7ab; }
+  .tour-btn-row { display:flex; gap:8px; }
+  .tour-btn { flex:1; padding:9px; font-family:'Lexend',sans-serif; font-size:10px; font-weight:700; border-radius:8px; cursor:pointer; }
+  .tour-btn-next { background:#1C2B3A; color:#fff; border:none; }
+  .tour-btn-skip { background:transparent; color:#888; border:1.5px solid #dde; }
+  body.dark .tour-btn-skip { border-color:#333; }
 </style>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -1790,11 +1825,12 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     <!-- Desktop buttons -->
     <button onclick="syncData()" id="syncBtnD" class="tb-btn2 tb-desktop-show">☁ SYNC</button>
     <button onclick="refreshFromCloud()" id="refreshBtnD" class="tb-btn2 tb-desktop-show">⟳ REFRESH</button>
-    <button onclick="authSignOut()" class="tb-btn2 tb-btn2-red tb-desktop-show">⏏ LOGOUT</button>
     <div class="tb-desktop-show" style="margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0;">
+      <span id="logoutTimeBadge2" class="tb-logout-badge" style="font-size:11px;">🕐 –</span>
       <span class="tb-time" id="timeNow"></span>
       <span class="tb-wd">WD:<strong id="workingDays">5</strong></span>
     </div>
+    <button onclick="authSignOut()" class="tb-btn2 tb-btn2-red tb-desktop-show">⏏ LOGOUT</button>
   </div>
 
   <!-- ROW 3 — DESKTOP: DATABASE | PUSH TO DB | ATTENDANCE | RESET | UNDO | SETTINGS -->
@@ -2712,6 +2748,8 @@ function recalc() {
     const ampm = hh >= 12 ? 'PM' : 'AM';
     const hh12 = hh % 12 || 12;
     badge.textContent = `Logout: ${hh12}:${String(mm).padStart(2,'0')} ${ampm}`;
+    const badge2 = document.getElementById('logoutTimeBadge2');
+    if (badge2) badge2.textContent = badge.textContent;
     // Tooltip shows full breakdown
     const fmt = m => `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;
     const targetForTooltip = (daysLeft <= 1) ? remTotal : tBilling;
@@ -2902,6 +2940,56 @@ document.addEventListener('click', function(e) {
   if (popup && !popup.contains(e.target) && !e.target.classList.contains('dur')) closeSplitPopup();
 });
 
+
+// ═══════════════ APP TOUR ═══════════════
+const TOUR_STEPS = [
+  { icon:'👋', title:'Welcome to WorkPlace', body:'This quick tour explains every part of the app. Hit Next to go step by step.' },
+  { icon:'📋', title:'The Time Table', body:'The main table is where you log your daily time. Each row is a working day (Sun–Thu). Columns: Production, Coaching, Meeting, Wellbeing, Break/Lunch, Unavailable, and Job Count.' },
+  { icon:'⏱', title:'Entering Time', body:'Tap any cell and type time in HH:MM format (e.g. 7:30). For Evening shift, double-click the Production cell to use the 3-input midnight-split calculator.' },
+  { icon:'✅', title:'Day Checkboxes', body:'The checkbox on each row enables/disables that day. Unchecking a day asks you to mark a leave type (PL, UL, HL, SL) which is saved to your Attendance Calendar.' },
+  { icon:'📊', title:'Bottom Panels', body:'Four info panels below the table: Billing (daily & weekly totals), Week Progress (done vs target), Remaining (how much per day you need), and Today (today's balance).' },
+  { icon:'📅', title:'Attendance Calendar', body:'View your full year's attendance. Tap any date to cycle through leave types. Today's date is highlighted in gold. Open it from the Calendar button.' },
+  { icon:'🗄', title:'Database & Push', body:'Push your weekly data to the database with ⬆ PUSH TO DB. Tap DATABASE to browse and export previous weeks. You can also export them as PDF.' },
+  { icon:'⚙', title:'Settings & Sync', body:'Use Settings to update your shift (Morning/Evening), targets, email, or password. Use SYNC to save to cloud, REFRESH to load the latest from cloud. Your data auto-saves after every change.' },
+];
+
+let _tourStep = 0;
+
+function startTour() {
+  _tourStep = 0;
+  _renderTourStep();
+  document.getElementById('appTour').classList.add('active');
+}
+
+function _renderTourStep() {
+  const s = TOUR_STEPS[_tourStep];
+  const total = TOUR_STEPS.length;
+  document.getElementById('appTour-step').textContent = `Step ${_tourStep+1} of ${total}`;
+  document.getElementById('appTour-icon').textContent = s.icon;
+  document.getElementById('appTour-title').textContent = s.title;
+  document.getElementById('appTour-body').textContent = s.body;
+  // Dots
+  const dots = document.getElementById('tourDots');
+  dots.innerHTML = TOUR_STEPS.map((_,i)=>`<div class="tour-dot${i===_tourStep?' active':''}"></div>`).join('');
+  // Button label
+  const nextBtn = document.querySelector('.tour-btn-next');
+  if (nextBtn) nextBtn.textContent = _tourStep === total-1 ? "✓ Let's Go!" : 'Next →';
+}
+
+function tourNext() {
+  if (_tourStep < TOUR_STEPS.length - 1) {
+    _tourStep++;
+    _renderTourStep();
+  } else {
+    tourSkip();
+  }
+}
+
+function tourSkip() {
+  document.getElementById('appTour').classList.remove('active');
+  localStorage.setItem('tourDone', '1');
+}
+// ════════════════════════════════════════
 function saveOnboarding() {
   const prod  = parseInt(document.getElementById('ob-prod').value)  || 0;
   const coach = parseInt(document.getElementById('ob-coach').value) || 0;
@@ -2934,6 +3022,8 @@ function saveOnboarding() {
 
   localStorage.setItem('userShift', _userShift);
   document.getElementById('onboardingModal').classList.remove('open');
+  // Start tour for new users
+  if (!localStorage.getItem('tourDone')) setTimeout(startTour, 400);
   window.saveUserData();
   if (window.recalc) window.recalc();
 }
@@ -4196,44 +4286,33 @@ function clearAllDb() {
 
 // ===== SYNC (SAVE to cloud) =====
 async function syncData() {
-  const btn = document.getElementById('syncBtn');
-  btn.textContent = '↑ SAVING...';
-  btn.style.opacity = '0.6';
-  btn.disabled = true;
+  const btns = ['syncBtn','syncBtnD'].map(id=>document.getElementById(id)).filter(Boolean);
+  btns.forEach(b=>{ b.textContent='↑ SAVING...'; b.style.opacity='0.6'; b.disabled=true; });
   try {
     await window.saveUserData();
-    btn.textContent = '✓ SAVED';
-    btn.style.color = '#90ee90';
-    setTimeout(() => { btn.textContent = '☁ SYNC'; btn.style.opacity = '1'; btn.style.color = '#E8F0F8'; btn.disabled = false; }, 2000);
+    btns.forEach(b=>{ b.textContent='✓ SAVED'; b.style.color='#90ee90'; });
+    setTimeout(() => btns.forEach(b=>{ b.textContent='☁ SYNC'; b.style.opacity='1'; b.style.color='#E8F0F8'; b.disabled=false; }), 2000);
   } catch(e) {
-    btn.textContent = '✗ FAILED';
-    btn.style.color = '#ffaaaa';
-    btn.disabled = false;
-    setTimeout(() => { btn.textContent = '☁ SYNC'; btn.style.opacity = '1'; btn.style.color = '#E8F0F8'; }, 2500);
+    btns.forEach(b=>{ b.textContent='✗ FAILED'; b.style.color='#ffaaaa'; b.disabled=false; });
+    setTimeout(() => btns.forEach(b=>{ b.textContent='☁ SYNC'; b.style.opacity='1'; b.style.color='#E8F0F8'; }), 2500);
   }
 }
 
 // ===== REFRESH (LOAD from cloud) =====
 async function refreshFromCloud() {
-  const btn = document.getElementById('refreshBtn');
-  btn.textContent = '↓ LOADING...';
-  btn.style.opacity = '0.6';
-  btn.disabled = true;
+  const btns = ['refreshBtn','refreshBtnD'].map(id=>document.getElementById(id)).filter(Boolean);
+  btns.forEach(b=>{ b.textContent='↓ LOADING...'; b.style.opacity='0.6'; b.disabled=true; });
   try {
     const user = window._fbAuth && window._fbAuth.currentUser;
     if (!user) throw new Error('Not logged in');
     await window.loadUserData(user.uid);
     if (window.recalc) window.recalc();
-    // Re-render db entries
     if (typeof renderDbEntries === 'function') renderDbEntries();
-    btn.textContent = '✓ REFRESHED';
-    btn.style.color = '#90ee90';
-    setTimeout(() => { btn.textContent = '⟳ REFRESH'; btn.style.opacity = '1'; btn.style.color = '#E8F0F8'; btn.disabled = false; }, 2000);
+    btns.forEach(b=>{ b.textContent='✓ REFRESHED'; b.style.color='#90ee90'; });
+    setTimeout(() => btns.forEach(b=>{ b.textContent='⟳ REFRESH'; b.style.opacity='1'; b.style.color='#E8F0F8'; b.disabled=false; }), 2000);
   } catch(e) {
-    btn.textContent = '✗ FAILED';
-    btn.style.color = '#ffaaaa';
-    btn.disabled = false;
-    setTimeout(() => { btn.textContent = '⟳ REFRESH'; btn.style.opacity = '1'; btn.style.color = '#E8F0F8'; }, 2500);
+    btns.forEach(b=>{ b.textContent='✗ FAILED'; b.style.color='#ffaaaa'; b.disabled=false; });
+    setTimeout(() => btns.forEach(b=>{ b.textContent='⟳ REFRESH'; b.style.opacity='1'; b.style.color='#E8F0F8'; }), 2500);
   }
 }
 
@@ -4451,6 +4530,22 @@ function authSignOut() {
   </div>
 </div>
 
+
+<!-- ===== APP TOUR ===== -->
+<div id="appTour">
+  <div id="appTour-overlay" onclick="tourSkip()"></div>
+  <div id="appTour-card">
+    <div id="appTour-step">Step 1 of 8</div>
+    <span id="appTour-icon">👋</span>
+    <div id="appTour-title">Welcome to WorkPlace</div>
+    <div class="tour-progress" id="tourDots"></div>
+    <div id="appTour-body">Let's take a quick tour of the app so you know where everything is.</div>
+    <div class="tour-btn-row">
+      <button class="tour-btn tour-btn-skip" onclick="tourSkip()">Skip Tour</button>
+      <button class="tour-btn tour-btn-next" onclick="tourNext()">Next →</button>
+    </div>
+  </div>
+</div>
 <!-- ===== SETTINGS MODAL ===== -->
 <div id="settingsModal">
   <div class="settings-card">
