@@ -397,6 +397,7 @@
     padding: 0;
   }
   .tb-sqbtn:active { background: rgba(255,255,255,0.28); }
+  .tb-sqbtn-lg { width: 38px; height: 38px; font-size: 20px; border-radius: 9px; }
 
 
   /* Hide number input spinners */
@@ -1722,17 +1723,17 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
   <div class="tb-r1">
     <button class="tb-sqbtn" onclick="toggleDarkMode()" title="Toggle light/dark mode"><span id="dm-icon">☀️</span></button>
     <span class="tb-username" id="topNameSpan">Mohammed Akram Khan</span>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <span id="logoutTimeBadge" style="font-family:'Lexend',sans-serif;font-size:9px;font-weight:700;color:#E8F0F8;white-space:nowrap;opacity:0.85;">🕐 –</span>
       <span class="tb-week" id="weekLabelBar">–</span>
     </div>
-    <button class="tb-sqbtn" onclick="openSettings()" title="Settings">⚙</button>
+    <button class="tb-sqbtn tb-sqbtn-lg" onclick="openSettings()" title="Settings">⚙</button>
   </div>
   <div class="tb-r2">
     <button onclick="syncData()" id="syncBtn" class="tb-btn2">☁ SYNC</button>
     <button onclick="refreshFromCloud()" id="refreshBtn" class="tb-btn2">⟳ REFRESH</button>
     <button onclick="authSignOut()" class="tb-btn2 tb-btn2-red">⏏ LOGOUT</button>
     <div style="margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0;">
-      <span id="logoutTimeBadge" class="tb-btn2" style="cursor:default;">🕐 –</span>
       <span class="tb-time" id="timeNow"></span>
       <span class="tb-wd">WD:<strong id="workingDays">5</strong></span>
     </div>
@@ -2525,14 +2526,14 @@ function recalc() {
     const remainMins = (daysLeft <= 1)
       ? Math.max(0, remTotal)                        // last day: weekly balance = what's left
       : Math.max(0, tBilling - doneMins);            // normal day: daily target minus done today
-    if (remainMins <= 0 && doneMins <= 0) { badge.textContent = '🕐 –'; return; }
+    if (remainMins <= 0 && doneMins <= 0) { badge.textContent = ''; return; }
     const now = new Date();
     const logoutMs = now.getTime() + remainMins * 60000;
     const lo = new Date(logoutMs);
     const hh = lo.getHours(), mm = lo.getMinutes();
     const ampm = hh >= 12 ? 'PM' : 'AM';
     const hh12 = hh % 12 || 12;
-    badge.textContent = `🕐 ${hh12}:${String(mm).padStart(2,'0')} ${ampm}`;
+    badge.textContent = `Logout: ${hh12}:${String(mm).padStart(2,'0')} ${ampm}`;
     // Tooltip shows full breakdown
     const fmt = m => `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;
     const targetForTooltip = (daysLeft <= 1) ? remTotal : tBilling;
@@ -3194,10 +3195,12 @@ window.addEventListener('load', () => {
   // Load saved shift
   _userShift = localStorage.getItem('userShift') || 'morning';
 
-  // Attach double-click split popup to all .dur inputs (any shift can use it)
+  // Evening shift only: double-click on PRODUCTION inputs opens 3-input split popup
   document.querySelectorAll('input.dur').forEach(inp => {
-    let _dblClickTimer = null;
     inp.addEventListener('dblclick', function(e) {
+      if (_userShift !== 'evening') return; // morning shift = no popup
+      const isProd = inp.id && inp.id.startsWith('prod_');
+      if (!isProd) return; // popup only for production column
       e.preventDefault();
       openSplitPopup(this);
     });
@@ -4057,6 +4060,11 @@ async function refreshFromCloud() {
 
 // ===== SETTINGS FUNCTIONS =====
 async function openSettings() {
+  // Reflect current shift state in buttons
+  settingsSaveShift(_userShift);
+  const msg = document.getElementById('set-shift-msg');
+  if (msg) msg.textContent = '';
+
   const user = window._fbAuth.currentUser;
   if (!user) return;
   // pre-fill current values
@@ -4144,6 +4152,25 @@ async function settingsSavePassword() {
     msg.style.color = '#c0392b';
     msg.textContent = e.code === 'auth/wrong-password' ? 'Incorrect current password.' : e.message;
   }
+}
+
+function settingsSaveShift(shift) {
+  _userShift = shift;
+  localStorage.setItem('userShift', shift);
+  // Update button styles
+  const mBtn = document.getElementById('set-shift-morning');
+  const eBtn = document.getElementById('set-shift-evening');
+  if (mBtn && eBtn) {
+    if (shift === 'morning') {
+      mBtn.className = 'auth-btn'; mBtn.style.flex = '1'; mBtn.style.padding = '10px 6px';
+      eBtn.className = 'auth-btn secondary'; eBtn.style.flex = '1'; eBtn.style.padding = '10px 6px';
+    } else {
+      mBtn.className = 'auth-btn secondary'; mBtn.style.flex = '1'; mBtn.style.padding = '10px 6px';
+      eBtn.className = 'auth-btn'; eBtn.style.flex = '1'; eBtn.style.padding = '10px 6px';
+    }
+  }
+  const msg = document.getElementById('set-shift-msg');
+  if (msg) { msg.textContent = `✓ Saved — ${shift === 'morning' ? 'Morning' : 'Evening'} shift`; setTimeout(()=>msg.textContent='',2500); }
 }
 
 function settingsSaveBilling() {
@@ -4249,6 +4276,14 @@ function authSignOut() {
 <div id="settingsModal">
   <div class="settings-card">
     <h3>ACCOUNT SETTINGS <span onclick="closeSettings()">✕</span></h3>
+
+    <div class="settings-section">Shift</div>
+    <p style="font-size:9px;color:#888;margin-bottom:10px;">Your shift determines how production input works. Evening shift unlocks the 3-part split popup (double-click production).</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button id="set-shift-morning" onclick="settingsSaveShift('morning')" class="auth-btn" style="flex:1;padding:10px 6px;">🌅 Morning<br><span style="font-size:8px;font-weight:400;opacity:0.8;">6:00 AM – 3:30 PM</span></button>
+      <button id="set-shift-evening" onclick="settingsSaveShift('evening')" class="auth-btn secondary" style="flex:1;padding:10px 6px;">🌙 Evening<br><span style="font-size:8px;font-weight:400;opacity:0.8;">4:00 PM – 1:30 AM</span></button>
+    </div>
+    <div class="settings-save" id="set-shift-msg"></div>
 
     <div class="settings-section">Profile</div>
     <div class="auth-field"><label>Display Name</label><input type="text" id="set-name" placeholder="Full name"></div>
