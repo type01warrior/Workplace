@@ -376,23 +376,27 @@
   body.dark .page { background: var(--bg-card); }
 
   /* ===== DARK MODE TOGGLE PILL ===== */
-  .dm-toggle {
+  /* Square-circle icon buttons (dark toggle + settings in row 1) */
+  .tb-sqbtn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     background: rgba(255,255,255,0.12);
     border: 1px solid rgba(255,255,255,0.25);
     cursor: pointer;
     user-select: none;
     flex-shrink: 0;
+    font-size: 16px;
+    line-height: 1;
+    color: #E8F0F8;
+    font-family: 'Lexend', sans-serif;
     transition: background 0.2s;
+    padding: 0;
   }
-  .dm-toggle:active { background: rgba(255,255,255,0.25); }
-  body.dark .dm-toggle { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
-  #dm-icon { font-size: 16px; line-height: 1; pointer-events: none; }
+  .tb-sqbtn:active { background: rgba(255,255,255,0.28); }
 
 
   /* Hide number input spinners */
@@ -420,6 +424,8 @@
   .top-bar { flex-direction:column !important; gap:5px !important; padding:10px 10px 8px !important; }
   .tb-r1,.tb-r3 { display:flex; align-items:center; width:100%; gap:5px; }
   .tb-r2 { display:flex; align-items:center; width:100%; gap:5px; flex-wrap:nowrap; overflow:hidden; }
+  #timeNow { display:none !important; }        /* hide clock on mobile */
+  .tb-btn3-desktop-only { display:none !important; } /* settings in row3 hidden on mobile */
   .tb-username { font-family:'Lexend',sans-serif; font-size:16px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%; }
   .tb-week { margin-left:auto; font-family:'Lexend',sans-serif; font-size:13px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
   .tb-btn2 { padding:4px 8px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; white-space:nowrap; }
@@ -1712,22 +1718,21 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
 <div id="statusBarSpacer"></div>
 <div class="top-bar">
   <div class="tb-r1">
+    <button class="tb-sqbtn" onclick="toggleDarkMode()" title="Toggle light/dark mode"><span id="dm-icon">☀️</span></button>
     <span class="tb-username" id="topNameSpan">Mohammed Akram Khan</span>
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
       <span class="tb-week" id="weekLabelBar">–</span>
     </div>
+    <button class="tb-sqbtn" onclick="openSettings()" title="Settings">⚙</button>
   </div>
   <div class="tb-r2">
-    <div class="dm-toggle" onclick="toggleDarkMode()" title="Toggle light/dark mode">
-      <span id="dm-icon">☀️</span>
-    </div>
     <button onclick="syncData()" id="syncBtn" class="tb-btn2">☁ SYNC</button>
     <button onclick="refreshFromCloud()" id="refreshBtn" class="tb-btn2">⟳ REFRESH</button>
     <button onclick="authSignOut()" class="tb-btn2 tb-btn2-red">⏏ LOGOUT</button>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;">
-      <span id="logoutTimeBadge" style="font-family:'Lexend',sans-serif;font-size:9px;font-weight:700;color:#E8F0F8;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:4px 8px;white-space:nowrap;flex-shrink:0;">🕐 –</span>
-      <span class="tb-time" id="timeNow" style="flex-shrink:0;"></span>
-      <span class="tb-wd" style="flex-shrink:0;">WD:<strong id="workingDays">5</strong></span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0;">
+      <span id="logoutTimeBadge" class="tb-btn2" style="cursor:default;">🕐 –</span>
+      <span class="tb-time" id="timeNow"></span>
+      <span class="tb-wd">WD:<strong id="workingDays">5</strong></span>
     </div>
   </div>
   <div class="tb-r3">
@@ -1736,7 +1741,7 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     <button onclick="openAttendance()" class="tb-btn3">📅 ATTENDANCE</button>
     <button onclick="(_snapshotState('Before Reset'),resetAllFields())" class="tb-btn3 tb-btn3-white">↺ RESET</button>
     <button onclick="undoLastAction()" id="undoBtn" class="tb-btn3" style="opacity:0.4;" disabled>↩ UNDO</button>
-    <button onclick="openSettings()" class="tb-btn3">⚙ SETTINGS</button>
+    <button onclick="openSettings()" class="tb-btn3 tb-btn3-desktop-only">⚙ SETTINGS</button>
   </div>
 </div>
 
@@ -2500,14 +2505,16 @@ function recalc() {
   setText('today_util_val', todayUtil);
 
   // ── Logout time estimate ──
+  // Formula: current time + (today's billing target − billing done today)
+  // Normal days → target = tBilling (fixed daily billing target e.g. 8:31)
+  // Last day (daysLeft=1) → target = remTotal (whatever is left to finish the week)
   (function() {
     const badge = document.getElementById('logoutTimeBadge');
     if (!badge) return;
-    // Which billing target to use:
-    // Last day (daysLeft==1): use remaining total billing balance for today
-    // Other days: use daily target (t25)
-    const targetMins = (daysLeft <= 1) ? Math.max(0, remTotal) : Math.max(0, t25);
-    const doneMins = todayBillingActual;   // billing done so far today
+    const targetMins = (daysLeft <= 1)
+      ? Math.max(0, remTotal)      // last day: use exact weekly remaining
+      : Math.max(0, tBilling);     // normal day: use fixed daily target (e.g. 8:31 = 511 mins)
+    const doneMins = todayBillingActual;
     const remainMins = Math.max(0, targetMins - doneMins);
     if (targetMins <= 0) { badge.textContent = '🕐 –'; return; }
     const now = new Date();
@@ -2517,7 +2524,9 @@ function recalc() {
     const ampm = hh >= 12 ? 'PM' : 'AM';
     const hh12 = hh % 12 || 12;
     badge.textContent = `🕐 ${hh12}:${String(mm).padStart(2,'0')} ${ampm}`;
-    badge.title = `Today's billing target: ${Math.floor(targetMins/60)}:${String(targetMins%60).padStart(2,'0')} | Done: ${Math.floor(doneMins/60)}:${String(doneMins%60).padStart(2,'0')} | Remaining: ${Math.floor(remainMins/60)}:${String(remainMins%60).padStart(2,'0')}`;
+    // Tooltip shows full breakdown
+    const fmt = m => `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;
+    badge.title = `Target: ${fmt(targetMins)} | Done: ${fmt(doneMins)} | Left: ${fmt(remainMins)}`;
   })();
 
   // Color util green/red
