@@ -522,7 +522,7 @@
   /* Header cells – minimal, dark, label-style */
   thead tr td.bg-red, thead tr th.bg-red {
     background: #1C2B3A !important;
-    color: #7a9ab8 !important;
+    color: #ffffff !important;
     font-size: 9px !important;
     font-weight: 700 !important;
     letter-spacing: 0.9px !important;
@@ -530,7 +530,7 @@
   }
   body.dark thead tr td.bg-red, body.dark thead tr th.bg-red {
     background: #111b25 !important;
-    color: #5a7a98 !important;
+    color: #ffffff !important;
   }
 
   /* ── Data rows: no fill, soft hover ── */
@@ -761,7 +761,7 @@
     font-weight: 700;
     letter-spacing: 0.9px;
     text-transform: uppercase;
-    color: #7a9ab8;
+    color: #ffffff;
   }
   .stat-panel-cols {
     display: flex;
@@ -774,7 +774,7 @@
     font-weight: 700;
     letter-spacing: 0.7px;
     text-transform: uppercase;
-    color: #5a7a98;
+    color: #ffffff;
     padding: 0 8px;
     min-width: 52px;
     text-align: left;
@@ -1359,6 +1359,8 @@ body.dark .att-year-label { color: #e8e8e8; }
   transform-origin: top left;
   display: block;
 }
+.att-cell.att-today { outline: 2px solid #E8B400 !important; outline-offset: -2px; font-weight: 900 !important; color: #E8B400 !important; }
+.att-month-label.att-today-month { background: #E8B400 !important; color: #1C2B3A !important; }
 .att-calendar { border-collapse: collapse; font-size: 8px; font-weight: 700; font-family: 'Lexend', sans-serif; }
 .att-calendar th, .att-calendar td { border: 1px solid #B0BCC8; padding: 0; text-align: center; white-space: nowrap; min-width: 12px; width: 12px; height: 14px; line-height: 1; font-size: 6px; }
 body.dark .att-calendar th, body.dark .att-calendar td { border-color: #3a3a3a; }
@@ -2099,13 +2101,18 @@ function getInputMins(id) {
   return parseTime(document.getElementById(id)?.value || '00:00');
 }
 
-// get next Friday label
+// Week ending label — week runs SAT→FRI
+// Show the Friday that ends the CURRENT week containing today.
+// Week starts on Saturday. If today IS Saturday, this week's end-Friday is 6 days later.
+// If today is any Sun–Fri, this week's end-Friday is the coming (or same-day) Friday.
 function getWeekLabel() {
   const today = new Date();
-  const day = today.getDay(); // 0=Sun
-  const daysUntilFri = (5 - day + 7) % 7 || 7;
+  const day = today.getDay(); // 0=Sun,1=Mon,...,5=Fri,6=Sat
+  // Days until the Friday that ENDS this week:
+  // Sat(6)→+6, Sun(0)→+5, Mon(1)→+4, Tue(2)→+3, Wed(3)→+2, Thu(4)→+1, Fri(5)→+0
+  const daysToFri = day === 5 ? 0 : day === 6 ? 6 : 5 - day;
   const fri = new Date(today);
-  fri.setDate(today.getDate() + daysUntilFri);
+  fri.setDate(today.getDate() + daysToFri);
   const d = fri.getDate();
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   let suffix;
@@ -3494,6 +3501,12 @@ window.addEventListener('resize', () => {
 
 function renderAttCalendar() {
   const table = document.getElementById('attCalendarTable');
+  // Today's date for highlighting
+  const _todayD = new Date();
+  const todayYear = _todayD.getFullYear();
+  const todayMonth = _todayD.getMonth(); // 0-indexed
+  const todayDay = _todayD.getDate();
+  const todayKey = `${todayYear}-${String(todayMonth+1).padStart(2,'0')}-${String(todayDay).padStart(2,'0')}`;
 
   // SAT=0, SUN=1, MON=2, TUE=3, WED=4, THU=5, FRI=6
   const WEEK_DAYS = ['SAT','SUN','MON','TUE','WED','THU','FRI'];
@@ -3534,7 +3547,8 @@ function renderAttCalendar() {
     const startPos = JS_TO_POS[firstJsDay];
 
     const rowClass = m % 2 === 0 ? 'att-row-odd' : 'att-row-even';
-    html += `<tr class="${rowClass}"><td class="att-month-label">${ATT_MONTHS[m]}</td>`;
+    const isThisMonth = (attYear === todayYear && m === todayMonth);
+    html += `<tr class="${rowClass}"><td class="att-month-label${isThisMonth ? ' att-today-month' : ''}">${ATT_MONTHS[m]}</td>`;
 
     let col = 0;
     let dayNum = 1;
@@ -3550,7 +3564,8 @@ function renderAttCalendar() {
         const d = dayNum;
         const key = `${attYear}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const leave = attData[key];
-        const cls = `att-cell${leave ? ' att-'+leave : ''}${weClass}`;
+        const isToday = (key === todayKey);
+        const cls = `att-cell${leave ? ' att-'+leave : ''}${weClass}${isToday ? ' att-today' : ''}`;
         html += `<td class="${cls}" data-key="${key}" onclick="attCellClick(event,this)" title="${key}">${leave || d}</td>`;
         dayNum++;
       }
