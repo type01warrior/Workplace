@@ -445,6 +445,9 @@
   .tb-r3 { justify-content:flex-start; gap:6px; }
   /* 3-column equal grid rows for mobile */
   .tb-mobile-grid3 { display:grid !important; grid-template-columns:1fr 1fr 1fr; gap:5px; width:100%; }
+  .tb-desktop-show { display:none !important; }
+  .tb-r2 > .tb-mobile-grid3 { width:100%; }
+  .tb-r3 > .tb-mobile-grid3 { width:100%; }
   .tb-grid-btn {
     display:flex; align-items:center; justify-content:center;
     height:38px; font-size:10px; letter-spacing:0.5px;
@@ -989,6 +992,14 @@
   }
   body.dark .att-calendar thead th:first-child { background: #0d1822 !important; }
 
+
+  @media screen and (min-width:769px) {
+    .tb-mobile-grid3 { display:none !important; }
+    .tb-desktop-show { display:revert !important; }
+    .tb-r2 > div.tb-desktop-show { display:flex !important; }
+    .tb-week-mobile { display:none !important; }
+    .tb-logout-badge { display:inline-flex !important; }
+  }
 </style>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -1756,36 +1767,53 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
 <!-- TOP BAR -->
 <div id="statusBarSpacer"></div>
 <div class="top-bar">
-  <!-- ROW 1: Dark toggle | Name | Settings -->
+  <!-- ROW 1: Dark toggle | Name | [logout badge + WE-date on desktop] | Settings -->
   <div class="tb-r1">
     <button class="tb-sqbtn" onclick="toggleDarkMode()" title="Toggle light/dark mode"><span id="dm-icon">☀️</span></button>
     <span class="tb-username" id="topNameSpan">Mohammed Akram Khan</span>
-    <div style="margin-left:auto;"></div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <span id="logoutTimeBadge" class="tb-logout-badge tb-desktop-show">🕐 –</span>
+      <span class="tb-week tb-desktop-show" id="weekLabelBar">–</span>
+    </div>
     <button class="tb-sqbtn tb-sqbtn-lg" onclick="openSettings()" title="Settings">⚙</button>
   </div>
-  <!-- ROW 2: Sync | Refresh | WE-date -->
-  <div class="tb-r2 tb-mobile-grid3">
-    <button onclick="syncData()" id="syncBtn" class="tb-grid-btn">SYNC</button>
-    <button onclick="refreshFromCloud()" id="refreshBtn" class="tb-grid-btn">REFRESH</button>
-    <div class="tb-grid-label"><span id="weekLabelBar">–</span></div>
+
+  <!-- ROW 2 — DESKTOP: ☁SYNC | ⟳REFRESH | ⏏LOGOUT | clock | WD -->
+  <!-- ROW 2 — MOBILE: [SYNC grid] [REFRESH grid] [WE-date grid] -->
+  <div class="tb-r2">
+    <!-- Mobile grid: 3 equal cells -->
+    <div class="tb-mobile-grid3">
+      <button onclick="syncData()" id="syncBtn" class="tb-grid-btn">SYNC</button>
+      <button onclick="refreshFromCloud()" id="refreshBtn" class="tb-grid-btn">REFRESH</button>
+      <div class="tb-grid-label"><span class="tb-week-mobile" id="weekLabelMobile">–</span></div>
+    </div>
+    <!-- Desktop buttons -->
+    <button onclick="syncData()" id="syncBtnD" class="tb-btn2 tb-desktop-show">☁ SYNC</button>
+    <button onclick="refreshFromCloud()" id="refreshBtnD" class="tb-btn2 tb-desktop-show">⟳ REFRESH</button>
+    <button onclick="authSignOut()" class="tb-btn2 tb-btn2-red tb-desktop-show">⏏ LOGOUT</button>
+    <div class="tb-desktop-show" style="margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0;">
+      <span class="tb-time" id="timeNow"></span>
+      <span class="tb-wd">WD:<strong id="workingDays">5</strong></span>
+    </div>
   </div>
-  <!-- ROW 3: Database | Attendance | Logout -->
-  <div class="tb-r3 tb-mobile-grid3">
-    <button onclick="showDbTab()" id="dbTabBtn" class="tb-grid-btn">DATABASE</button>
-    <button onclick="openAttendance()" class="tb-grid-btn">CALENDAR</button>
-    <button onclick="authSignOut()" class="tb-grid-btn tb-grid-btn-red">⏏ LOGOUT</button>
+
+  <!-- ROW 3 — DESKTOP: DATABASE | PUSH TO DB | ATTENDANCE | RESET | UNDO | SETTINGS -->
+  <!-- ROW 3 — MOBILE: [DATABASE grid] [CALENDAR grid] [LOGOUT grid] -->
+  <div class="tb-r3">
+    <!-- Mobile grid: 3 equal cells -->
+    <div class="tb-mobile-grid3">
+      <button onclick="showDbTab()" id="dbTabBtn" class="tb-grid-btn">DATABASE</button>
+      <button onclick="openAttendance()" class="tb-grid-btn">CALENDAR</button>
+      <button onclick="authSignOut()" class="tb-grid-btn tb-grid-btn-red">⏏ LOGOUT</button>
+    </div>
+    <!-- Desktop buttons -->
+    <button onclick="showDbTab()" id="dbTabBtnD" class="tb-btn3 tb-desktop-show">DATABASE</button>
+    <button onclick="pushToDatabase()" class="tb-btn3 tb-desktop-show">⬆ PUSH TO DB</button>
+    <button onclick="openAttendance()" class="tb-btn3 tb-desktop-show">📅 ATTENDANCE</button>
+    <button onclick="(_snapshotState('Before Reset'),resetAllFields())" class="tb-btn3 tb-btn3-white tb-desktop-show">↺ RESET</button>
+    <button onclick="undoLastAction()" id="undoBtn" class="tb-btn3 tb-desktop-show" style="opacity:0.4;" disabled>↩ UNDO</button>
+    <button onclick="openSettings()" class="tb-btn3 tb-desktop-show">⚙ SETTINGS</button>
   </div>
-  <!-- DESKTOP-ONLY extra row: Push | Reset | Undo | Settings -->
-  <div class="tb-r2 tb-desktop-only-flex">
-    <button onclick="pushToDatabase()" class="tb-btn3">⬆ PUSH TO DB</button>
-    <button onclick="(_snapshotState('Before Reset'),resetAllFields())" class="tb-btn3 tb-btn3-white">↺ RESET</button>
-    <button onclick="undoLastAction()" id="undoBtn" class="tb-btn3" style="opacity:0.4;" disabled>↩ UNDO</button>
-    <button onclick="openSettings()" class="tb-btn3">⚙ SETTINGS</button>
-  </div>
-  <!-- Hidden elements needed for logic -->
-  <span class="tb-time" id="timeNow" style="display:none;"></span>
-  <span style="display:none;" id="logoutTimeBadge"></span>
-  <span style="display:none;" class="tb-wd">WD:<strong id="workingDays">5</strong></span>
 </div>
 
 <!-- WEEKOFF SELECTOR -->
@@ -2414,6 +2442,8 @@ function recalc() {
 
   const wlb = document.getElementById('weekLabelBar');
   if (wlb) wlb.textContent = weekLabel;
+  const wlbm = document.getElementById('weekLabelMobile');
+  if (wlbm) wlbm.textContent = weekLabel;
 
   // Update date/time
   const now = new Date();
