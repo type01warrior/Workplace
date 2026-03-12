@@ -2595,59 +2595,116 @@ function selectObShift(shift) {
 
 // ── SPLIT-ENTRY POPUP (double-click on dur input for evening shift) ──
 function openSplitPopup(inputEl) {
-  // Remove old popup if exists
   const old = document.getElementById('splitPopup');
   if (old) old.remove();
 
-  const curVal = inputEl.value || '00:00';
   const label = inputEl.closest('tr')?.querySelector('td.left')?.textContent?.trim() || inputEl.id;
   const fieldName = inputEl.id.split('_')[0].toUpperCase();
+  const isDark = document.body.classList.contains('dark');
+  const bg = isDark ? '#1a1a1a' : '#fff';
+  const border = isDark ? '#333' : '#1C2B3A';
+  const txt = isDark ? '#e8e8e8' : '#1C2B3A';
+  const inputBg = isDark ? '#111' : '#fff';
+  const inputBorder = isDark ? '#444' : '#ccd6e0';
+  const totalBg = isDark ? '#0d1822' : '#f0f6fc';
+
+  const inpStyle = `width:100%;padding:8px 10px;border:1.5px solid ${inputBorder};border-radius:8px;font-family:Lexend,sans-serif;font-size:13px;font-weight:700;box-sizing:border-box;outline:none;background:${inputBg};color:${txt};`;
 
   const popup = document.createElement('div');
   popup.id = 'splitPopup';
-  popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:2px solid #1C2B3A;border-radius:12px;padding:20px 24px;z-index:99999;min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,0.25);font-family:Lexend,sans-serif;';
+  popup.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:${bg};border:2px solid ${border};border-radius:12px;padding:20px 24px;z-index:99999;min-width:280px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.35);font-family:Lexend,sans-serif;`;
+
   popup.innerHTML = `
-    <div style="font-size:11px;font-weight:700;color:#1C2B3A;margin-bottom:14px;letter-spacing:0.5px;">${label} — ${fieldName} <span style="font-weight:400;color:#888;font-size:9px;">Split across midnight</span></div>
+    <div style="font-size:11px;font-weight:700;color:${txt};margin-bottom:4px;letter-spacing:0.5px;">${label} — ${fieldName}</div>
+    <div style="font-size:8px;color:#888;margin-bottom:14px;">Formula: (②  − ①) + ③ = Total</div>
+
     <div style="margin-bottom:10px;">
-      <label style="font-size:9px;font-weight:700;color:#888;display:block;margin-bottom:4px;">BEFORE 12:00 AM</label>
-      <input id="split-before" type="text" placeholder="HH:MM" maxlength="5"
-        style="width:100%;padding:8px 10px;border:1.5px solid #ccd6e0;border-radius:8px;font-family:Lexend,sans-serif;font-size:13px;font-weight:700;box-sizing:border-box;outline:none;" oninput="fmtDurInput(this);splitCalcTotal()">
+      <label style="font-size:9px;font-weight:700;color:#e67e22;display:block;margin-bottom:4px;">① ALREADY LOGGED (subtract)</label>
+      <input id="split-sub" type="text" placeholder="HH:MM" maxlength="5"
+        style="${inpStyle}border-color:#e67e22 !important;"
+        oninput="fmtDurInput(this);splitCalcTotal()">
+      <div style="font-size:8px;color:#888;margin-top:2px;">Time already counted from previous login</div>
     </div>
+
+    <div style="margin-bottom:10px;">
+      <label style="font-size:9px;font-weight:700;color:#27ae60;display:block;margin-bottom:4px;">② TOTAL DONE TODAY</label>
+      <input id="split-total-done" type="text" placeholder="HH:MM" maxlength="5"
+        style="${inpStyle}border-color:#27ae60 !important;"
+        oninput="fmtDurInput(this);splitCalcTotal()">
+      <div style="font-size:8px;color:#888;margin-top:2px;">Your total production so far today</div>
+    </div>
+
     <div style="margin-bottom:14px;">
-      <label style="font-size:9px;font-weight:700;color:#888;display:block;margin-bottom:4px;">AFTER 12:00 AM (next day)</label>
+      <label style="font-size:9px;font-weight:700;color:#2980b9;display:block;margin-bottom:4px;">③ AFTER MIDNIGHT (optional)</label>
       <input id="split-after" type="text" placeholder="HH:MM" maxlength="5"
-        style="width:100%;padding:8px 10px;border:1.5px solid #ccd6e0;border-radius:8px;font-family:Lexend,sans-serif;font-size:13px;font-weight:700;box-sizing:border-box;outline:none;" oninput="fmtDurInput(this);splitCalcTotal()">
+        style="${inpStyle}border-color:#2980b9 !important;"
+        oninput="fmtDurInput(this);splitCalcTotal()">
+      <div style="font-size:8px;color:#888;margin-top:2px;">Additional time after midnight / next session</div>
     </div>
-    <div id="split-total" style="text-align:center;font-size:13px;font-weight:700;color:#1C2B3A;background:#f0f6fc;border-radius:8px;padding:8px;margin-bottom:14px;">Total: –</div>
+
+    <div id="split-total-display" style="text-align:center;font-size:14px;font-weight:700;color:${txt};background:${totalBg};border-radius:8px;padding:10px;margin-bottom:14px;letter-spacing:0.5px;">Total: –</div>
+
     <div style="display:flex;gap:8px;">
       <button onclick="closeSplitPopup()" style="flex:1;padding:8px;font-family:Lexend,sans-serif;font-size:10px;font-weight:700;background:transparent;border:1.5px solid #ccd6e0;border-radius:8px;cursor:pointer;color:#888;">Cancel</button>
-      <button onclick="applySplitPopup('${inputEl.id}')" style="flex:2;padding:8px;font-family:Lexend,sans-serif;font-size:10px;font-weight:700;background:#1C2B3A;color:#fff;border:none;border-radius:8px;cursor:pointer;">✓ Update</button>
+      <button onclick="applySplitPopup('${inputEl.id}')" id="split-update-btn" style="flex:2;padding:8px;font-family:Lexend,sans-serif;font-size:10px;font-weight:700;background:#1C2B3A;color:#fff;border:none;border-radius:8px;cursor:pointer;">✓ Update</button>
     </div>`;
+
   document.body.appendChild(popup);
-  document.getElementById('split-before').focus();
+
+  // Enter key navigation: ①→②→③→Update
+  const inputs = ['split-sub','split-total-done','split-after'];
+  inputs.forEach((id, idx) => {
+    document.getElementById(id).addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (idx < inputs.length - 1) {
+          document.getElementById(inputs[idx + 1]).focus();
+        } else {
+          // 4th Enter (from last input) = click Update
+          applySplitPopup(inputEl.id);
+        }
+      }
+    });
+  });
+  // Also Enter on update button
+  document.getElementById('split-update-btn').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') applySplitPopup(inputEl.id);
+  });
+
+  document.getElementById('split-sub').focus();
 }
 
 function splitCalcTotal() {
   function pm(v) {
-    if (!v || v==='00:00') return 0;
-    const p=v.split(':'); return (parseInt(p[0])||0)*60+(parseInt(p[1])||0);
+    if (!v) return 0;
+    const p = v.split(':'); return (parseInt(p[0])||0)*60+(parseInt(p[1])||0);
   }
-  const b = pm(document.getElementById('split-before')?.value||'');
-  const a = pm(document.getElementById('split-after')?.value||'');
-  const tot = b + a;
+  const sub  = pm(document.getElementById('split-sub')?.value||'');
+  const done = pm(document.getElementById('split-total-done')?.value||'');
+  const aftr = pm(document.getElementById('split-after')?.value||'');
+  // Formula: (done - sub) + after
+  const tot = Math.max(0, (done - sub)) + aftr;
   const h = Math.floor(tot/60), m = tot%60;
-  const el = document.getElementById('split-total');
-  if (el) el.textContent = tot > 0 ? `Total: ${h}:${String(m).padStart(2,'0')}` : 'Total: –';
+  const el = document.getElementById('split-total-display');
+  if (!el) return;
+  const netPart = done - sub;
+  const breakdown = netPart >= 0
+    ? `(${Math.floor(done/60)}:${String(done%60).padStart(2,'0')} − ${Math.floor(sub/60)}:${String(sub%60).padStart(2,'0')}) + ${Math.floor(aftr/60)}:${String(aftr%60).padStart(2,'0')}`
+    : '';
+  el.innerHTML = tot > 0
+    ? `<div style="font-size:11px;font-weight:700;">Total: ${h}:${String(m).padStart(2,'0')}</div>${breakdown ? `<div style="font-size:9px;opacity:0.6;margin-top:2px;">${breakdown}</div>` : ''}`
+    : 'Total: –';
 }
 
 function applySplitPopup(inputId) {
   function pm(v) {
-    if (!v || v==='00:00') return 0;
-    const p=v.split(':'); return (parseInt(p[0])||0)*60+(parseInt(p[1])||0);
+    if (!v) return 0;
+    const p = v.split(':'); return (parseInt(p[0])||0)*60+(parseInt(p[1])||0);
   }
-  const b = pm(document.getElementById('split-before')?.value||'');
-  const a = pm(document.getElementById('split-after')?.value||'');
-  const tot = b + a;
+  const sub  = pm(document.getElementById('split-sub')?.value||'');
+  const done = pm(document.getElementById('split-total-done')?.value||'');
+  const aftr = pm(document.getElementById('split-after')?.value||'');
+  const tot = Math.max(0, (done - sub)) + aftr;
   if (tot === 0) { closeSplitPopup(); return; }
   const h = Math.floor(tot/60), m = tot%60;
   const el = document.getElementById(inputId);
