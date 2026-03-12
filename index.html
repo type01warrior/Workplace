@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>WorkPlace - Designed By Type01warrior</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Lexend:wght@400;700&family=Pacifico&display=swap" rel="stylesheet">
 <style>
@@ -336,11 +336,7 @@
     --cell-bg: #0d0d0d;
     --header-text: #ffffff;
   }
-  body { background: var(--bg-page); color: var(--text);
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-left: env(safe-area-inset-left, 0px);
-  padding-right: env(safe-area-inset-right, 0px);
-}
+  body { background: var(--bg-page); color: var(--text); padding: 0; margin: 0; }
   .page { background: var(--bg-page); }
 
   /* All td/th get dark cell bg in dark mode */
@@ -383,36 +379,20 @@
   .dm-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 0;
-    background: #ddd;
-    border-radius: 20px;
-    padding: 2px;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
     cursor: pointer;
-    border: 1px solid #bbb;
-    transition: background 0.3s;
     user-select: none;
+    flex-shrink: 0;
+    transition: background 0.2s;
   }
-  body.dark .dm-toggle { background: #333; border-color: #555; }
-  .dm-toggle .pill-option {
-    padding: 3px 10px;
-    border-radius: 16px;
-    font-size: 10px;
-    font-weight: 700;
-    font-family: 'Lexend', sans-serif;
-    transition: background 0.2s, color 0.2s;
-    color: #888;
-  }
-  .dm-toggle .pill-option.active {
-    background: white;
-    color: #000;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-  }
-  body.dark .dm-toggle .pill-option.active {
-    background: #1a1a2e;
-    color: #e0e0e0;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-  }
-  body.dark .dm-toggle .pill-option:not(.active) { color: #666; }
+  .dm-toggle:active { background: rgba(255,255,255,0.25); }
+  body.dark .dm-toggle { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+  #dm-icon { font-size: 16px; line-height: 1; pointer-events: none; }
 
 
   /* Hide number input spinners */
@@ -437,9 +417,9 @@
     padding: 1px 2px;
   }
 
-  .top-bar { flex-direction:column !important; gap:5px !important; padding:10px 10px 8px !important; padding-top: max(10px, env(safe-area-inset-top, 0px) + 4px) !important; }
+  .top-bar { flex-direction:column !important; gap:5px !important; padding:10px 10px 8px !important; }
   .tb-r1,.tb-r3 { display:flex; align-items:center; width:100%; gap:5px; }
-  .tb-r2 { display:flex; align-items:center; width:100%; gap:5px; flex-wrap:wrap; }
+  .tb-r2 { display:flex; align-items:center; width:100%; gap:5px; flex-wrap:nowrap; overflow:hidden; }
   .tb-username { font-family:'Lexend',sans-serif; font-size:16px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%; }
   .tb-week { margin-left:auto; font-family:'Lexend',sans-serif; font-size:13px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
   .tb-btn2 { padding:4px 8px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; white-space:nowrap; }
@@ -450,7 +430,7 @@
   .tb-btn3 { flex:1; padding:4px 2px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:8px; cursor:pointer; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .tb-btn3-white { background:#fff !important; color:#1C2B3A !important; border:none !important; }
 
-  .four-grid { display:grid !important; grid-template-columns:1fr 1fr 1fr 1fr !important; gap:5px; width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .four-grid { display:grid !important; grid-template-columns:1fr 1fr !important; gap:5px; width:100%; }
   .fg-cell { min-width:0; display:flex; flex-direction:column; gap:3px; }
   .fg-cell .tcard-compact { width:100% !important; display:block !important; }
   .fg-cell .tcard-compact table { width:100% !important; table-layout:fixed !important; }
@@ -464,8 +444,8 @@
   .fg-btn-blue { background:#2E4A62; color:#E8F0F8; }
 
   @media screen and (max-width:768px) {
-    body { min-width:0 !important; padding:0 !important; margin:0 !important; }
-    .page { padding:4px !important; margin-top:36px !important; }
+    body { min-width:0 !important; padding:0 !important; padding-bottom:16px !important; margin:0 !important; }
+    .page { padding:4px !important; margin-top:0 !important; }
     .sections { grid-template-columns:1fr !important; gap:6px !important; }
     .divider { display:none !important; }
     .panels { grid-template-columns:1fr !important; gap:6px !important; }
@@ -1345,10 +1325,7 @@ body.dark .db-modal-header h4 { color: #e8e8e8; }
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.55); z-index: 8500;
   align-items: flex-start; justify-content: center;
-  padding: 16px 4px 20px;
-  padding-top: max(16px, env(safe-area-inset-top, 0px) + 8px);
-  padding-left: max(4px, env(safe-area-inset-left, 0px));
-  padding-right: max(4px, env(safe-area-inset-right, 0px));
+  padding: 8px 4px 20px;
   font-family: 'Lexend', sans-serif;
   overflow-y: auto; overflow-x: hidden;
   box-sizing: border-box;
@@ -1646,6 +1623,39 @@ body.dark .db-entry { border-color: #333; }
   color: #E8F0F8;
 }
 </style>
+
+<style>
+/* Android status bar spacer — only shows in Android WebView */
+#statusBarSpacer {
+  display: none;
+  height: 0px;
+  width: 100%;
+  background: #0d0d0d;
+}
+body.dark #statusBarSpacer { background: #0d0d0d; }
+body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
+</style>
+<script>
+// Android: insert a spacer above everything to push content below status bar
+(function() {
+  var ua = navigator.userAgent || '';
+  if (!/Android/i.test(ua)) return;
+  // Android status bar is typically 24dp; at mdpi=24px, hdpi=36px, xhdpi=48px, xxhdpi=72px
+  // Use 48px as safe default for most modern phones (xxhdpi is common)
+  var statusBarH = 48;
+  // Try to read from Android interface if available (future-proof)
+  if (window.Android && window.Android.getStatusBarHeight) {
+    statusBarH = window.Android.getStatusBarHeight();
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    var spacer = document.getElementById('statusBarSpacer');
+    if (spacer) {
+      spacer.style.display = 'block';
+      spacer.style.height = statusBarH + 'px';
+    }
+  });
+})();
+</script>
 </head>
 <body>
 <!-- ===== AUTH OVERLAY ===== -->
@@ -1699,22 +1709,26 @@ body.dark .db-entry { border-color: #333; }
 <div class="page">
 
 <!-- TOP BAR -->
+<div id="statusBarSpacer"></div>
 <div class="top-bar">
   <div class="tb-r1">
     <span class="tb-username" id="topNameSpan">Mohammed Akram Khan</span>
-    <span class="tb-week" id="weekLabelBar">–</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <span class="tb-week" id="weekLabelBar">–</span>
+    </div>
   </div>
   <div class="tb-r2">
-    <div class="dm-toggle" onclick="toggleDarkMode()">
-      <span class="pill-option active" id="pill-light">☀️ Light</span>
-      <span class="pill-option" id="pill-dark">🌙 Dark</span>
+    <div class="dm-toggle" onclick="toggleDarkMode()" title="Toggle light/dark mode">
+      <span id="dm-icon">☀️</span>
     </div>
     <button onclick="syncData()" id="syncBtn" class="tb-btn2">☁ SYNC</button>
     <button onclick="refreshFromCloud()" id="refreshBtn" class="tb-btn2">⟳ REFRESH</button>
     <button onclick="authSignOut()" class="tb-btn2 tb-btn2-red">⏏ LOGOUT</button>
-    <span id="logoutTimeBadge" title="Estimated logout time based on today's billing target" style="font-family:'Lexend',sans-serif;font-size:9px;font-weight:700;color:#E8F0F8;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:4px 8px;white-space:nowrap;cursor:help;">🕐 –:–</span>
-    <span class="tb-time" id="timeNow"></span>
-    <span class="tb-wd">WD:<strong id="workingDays">5</strong></span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;">
+      <span id="logoutTimeBadge" style="font-family:'Lexend',sans-serif;font-size:9px;font-weight:700;color:#E8F0F8;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:4px 8px;white-space:nowrap;flex-shrink:0;">🕐 –</span>
+      <span class="tb-time" id="timeNow" style="flex-shrink:0;"></span>
+      <span class="tb-wd" style="flex-shrink:0;">WD:<strong id="workingDays">5</strong></span>
+    </div>
   </div>
   <div class="tb-r3">
     <button onclick="showDbTab()" id="dbTabBtn" class="tb-btn3">DATABASE</button>
@@ -2008,7 +2022,7 @@ body.dark .db-entry { border-color: #333; }
       </div>
       <div class="stat-input-row">
         <span class="stat-label">Days Left</span>
-        <input type="number" id="daysLeft" value="1" min="0" max="5" onchange="recalc()" title="Auto-calculated from today's position in week" style="background:rgba(255,255,255,0.05);cursor:default;">
+        <input type="number" id="daysLeft" value="1" min="0" max="5" onchange="_daysLeftUserEdited=true;recalc()" title="Auto-set based on today — edit to override" style="background:rgba(255,255,255,0.08);cursor:text;">
       </div>
       <div class="stat-row"><span class="stat-label">Production</span><span class="stat-val" id="p2_rprod">–</span></div>
       <div class="stat-row"><span class="stat-label">Aux</span><span class="stat-val" id="p2_raux">–</span></div>
@@ -2207,12 +2221,16 @@ function applyUtilColor(elId, pct) {
 
 
 // Auto-calculate days left: enabled rows after today, min 1
-function autoCalcDaysLeft() {
-  const todayName = getTodayDayName(); // e.g. 'TUESDAY'
-  const todayIdx = DAY_NAMES.indexOf(todayName); // index in DAYS array
-  if (todayIdx < 0) return; // weekend / not a working day row — leave as-is
+// Only sets the default once; user can override manually after that
+let _daysLeftUserEdited = false;
 
-  // Count enabled days strictly AFTER today in this week
+function autoCalcDaysLeft() {
+  if (_daysLeftUserEdited) return; // user has manually changed it — respect their value
+
+  const todayName = getTodayDayName();
+  const todayIdx = DAY_NAMES.indexOf(todayName);
+  if (todayIdx < 0) return;
+
   let daysAfterToday = 0;
   DAYS.forEach((d, i) => {
     if (i > todayIdx) {
@@ -2221,7 +2239,6 @@ function autoCalcDaysLeft() {
     }
   });
 
-  // Days left = days after today, minimum 1 (we're still working today)
   const val = Math.max(1, daysAfterToday);
   const el = document.getElementById('daysLeft');
   if (el) el.value = val;
@@ -2492,7 +2509,7 @@ function recalc() {
     const targetMins = (daysLeft <= 1) ? Math.max(0, remTotal) : Math.max(0, t25);
     const doneMins = todayBillingActual;   // billing done so far today
     const remainMins = Math.max(0, targetMins - doneMins);
-    if (targetMins <= 0) { badge.textContent = '🕐 –:–'; return; }
+    if (targetMins <= 0) { badge.textContent = '🕐 –'; return; }
     const now = new Date();
     const logoutMs = now.getTime() + remainMins * 60000;
     const lo = new Date(logoutMs);
@@ -2926,6 +2943,7 @@ function lsSet(key, val) { localStorage.setItem(lsKey(key), JSON.stringify(val))
 
 // Call on login to init uid-scoped storage
 function initUserStorage(uid) {
+  _daysLeftUserEdited = false; // reset on login/reload — auto-calc will run fresh
   _currentUid = uid;
   // Re-init attData and dbEntries from this user's scoped keys
   attData = lsGet('att_data', '{}');
@@ -3017,8 +3035,8 @@ function getISTTime() {
 // ===== DARK MODE =====
 function toggleDarkMode() {
   const isDark = document.body.classList.toggle('dark');
-  document.getElementById('pill-light').classList.toggle('active', !isDark);
-  document.getElementById('pill-dark').classList.toggle('active', isDark);
+  const icon = document.getElementById('dm-icon');
+  if (icon) icon.textContent = isDark ? '🌙' : '☀️';
   localStorage.setItem('dmMode', isDark ? 'dark' : 'light');
 }
 
@@ -3088,8 +3106,8 @@ window.addEventListener('load', () => {
   // Restore dark mode
   if (localStorage.getItem('dmMode') === 'dark') {
     document.body.classList.add('dark');
-    document.getElementById('pill-light').classList.remove('active');
-    document.getElementById('pill-dark').classList.add('active');
+    const icon = document.getElementById('dm-icon');
+    if (icon) icon.textContent = '🌙';
   }
   updateWorkingDayRows();
   recalc();
