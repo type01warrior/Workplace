@@ -398,6 +398,21 @@
   }
   .tb-sqbtn:active { background: rgba(255,255,255,0.28); }
   .tb-sqbtn-lg { width: 38px; height: 38px; font-size: 20px; border-radius: 9px; }
+  .tb-logout-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Lexend', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1C2B3A;
+    background: #E8C74A;
+    border-radius: 9px;
+    padding: 4px 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.3px;
+  }
 
 
   /* Hide number input spinners */
@@ -425,8 +440,29 @@
   .top-bar { flex-direction:column !important; gap:5px !important; padding:10px 10px 8px !important; }
   .tb-r1,.tb-r3 { display:flex; align-items:center; width:100%; gap:5px; }
   .tb-r2 { display:flex; align-items:center; width:100%; gap:5px; flex-wrap:nowrap; overflow:hidden; }
-  #timeNow { display:none !important; }        /* hide clock on mobile */
-  .tb-btn3-desktop-only { display:none !important; } /* settings in row3 hidden on mobile */
+  #timeNow { display:none !important; }
+  /* Mobile action buttons in r2/r3 fill space nicely */
+  .tb-r3 { justify-content:flex-start; gap:6px; }
+  /* 3-column equal grid rows for mobile */
+  .tb-mobile-grid3 { display:grid !important; grid-template-columns:1fr 1fr 1fr; gap:5px; width:100%; }
+  .tb-grid-btn {
+    display:flex; align-items:center; justify-content:center;
+    height:38px; font-size:10px; letter-spacing:0.5px;
+    background:rgba(255,255,255,0.12); color:#E8F0F8;
+    border:1px solid rgba(255,255,255,0.25); border-radius:9px;
+    cursor:pointer; font-family:'Lexend',sans-serif; font-weight:700;
+    width:100%;
+  }
+  .tb-grid-btn:active { background:rgba(255,255,255,0.28); }
+  .tb-grid-btn-red { background:rgba(192,57,43,0.75) !important; border-color:rgba(192,57,43,0.5) !important; font-size:11px !important; }
+  .tb-grid-label {
+    display:flex; align-items:center; justify-content:center;
+    height:38px; border-radius:9px;
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
+    font-family:'Lexend',sans-serif; font-size:12px; font-weight:700; color:#E8F0F8;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 6px;
+  }
+  .tb-desktop-only-flex { display:none !important; }
   .tb-username { font-family:'Lexend',sans-serif; font-size:16px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%; }
   .tb-week { margin-left:auto; font-family:'Lexend',sans-serif; font-size:13px; font-weight:700; color:#E8F0F8; white-space:nowrap; }
   .tb-btn2 { padding:4px 8px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; background:rgba(255,255,255,0.15); color:#E8F0F8; border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; white-space:nowrap; }
@@ -1720,32 +1756,36 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
 <!-- TOP BAR -->
 <div id="statusBarSpacer"></div>
 <div class="top-bar">
+  <!-- ROW 1: Dark toggle | Name | Settings -->
   <div class="tb-r1">
     <button class="tb-sqbtn" onclick="toggleDarkMode()" title="Toggle light/dark mode"><span id="dm-icon">☀️</span></button>
     <span class="tb-username" id="topNameSpan">Mohammed Akram Khan</span>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0;">
-      <span id="logoutTimeBadge" style="font-family:'Lexend',sans-serif;font-size:9px;font-weight:700;color:#E8F0F8;white-space:nowrap;opacity:0.85;">🕐 –</span>
-      <span class="tb-week" id="weekLabelBar">–</span>
-    </div>
+    <div style="margin-left:auto;"></div>
     <button class="tb-sqbtn tb-sqbtn-lg" onclick="openSettings()" title="Settings">⚙</button>
   </div>
-  <div class="tb-r2">
-    <button onclick="syncData()" id="syncBtn" class="tb-btn2">☁ SYNC</button>
-    <button onclick="refreshFromCloud()" id="refreshBtn" class="tb-btn2">⟳ REFRESH</button>
-    <button onclick="authSignOut()" class="tb-btn2 tb-btn2-red">⏏ LOGOUT</button>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0;">
-      <span class="tb-time" id="timeNow"></span>
-      <span class="tb-wd">WD:<strong id="workingDays">5</strong></span>
-    </div>
+  <!-- ROW 2: Sync | Refresh | WE-date -->
+  <div class="tb-r2 tb-mobile-grid3">
+    <button onclick="syncData()" id="syncBtn" class="tb-grid-btn">SYNC</button>
+    <button onclick="refreshFromCloud()" id="refreshBtn" class="tb-grid-btn">REFRESH</button>
+    <div class="tb-grid-label"><span id="weekLabelBar">–</span></div>
   </div>
-  <div class="tb-r3">
-    <button onclick="showDbTab()" id="dbTabBtn" class="tb-btn3">DATABASE</button>
+  <!-- ROW 3: Database | Attendance | Logout -->
+  <div class="tb-r3 tb-mobile-grid3">
+    <button onclick="showDbTab()" id="dbTabBtn" class="tb-grid-btn">DATABASE</button>
+    <button onclick="openAttendance()" class="tb-grid-btn">CALENDAR</button>
+    <button onclick="authSignOut()" class="tb-grid-btn tb-grid-btn-red">⏏ LOGOUT</button>
+  </div>
+  <!-- DESKTOP-ONLY extra row: Push | Reset | Undo | Settings -->
+  <div class="tb-r2 tb-desktop-only-flex">
     <button onclick="pushToDatabase()" class="tb-btn3">⬆ PUSH TO DB</button>
-    <button onclick="openAttendance()" class="tb-btn3">📅 ATTENDANCE</button>
     <button onclick="(_snapshotState('Before Reset'),resetAllFields())" class="tb-btn3 tb-btn3-white">↺ RESET</button>
     <button onclick="undoLastAction()" id="undoBtn" class="tb-btn3" style="opacity:0.4;" disabled>↩ UNDO</button>
-    <button onclick="openSettings()" class="tb-btn3 tb-btn3-desktop-only">⚙ SETTINGS</button>
+    <button onclick="openSettings()" class="tb-btn3">⚙ SETTINGS</button>
   </div>
+  <!-- Hidden elements needed for logic -->
+  <span class="tb-time" id="timeNow" style="display:none;"></span>
+  <span style="display:none;" id="logoutTimeBadge"></span>
+  <span style="display:none;" class="tb-wd">WD:<strong id="workingDays">5</strong></span>
 </div>
 
 <!-- WEEKOFF SELECTOR -->
@@ -1865,7 +1905,7 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     <!-- DAILY ROWS -->
     <tr class="bg-gray" id="row_sun">
       <td class="left">SUNDAY</td>
-      <td class="input-cell"><input type="checkbox" id="chk_sun" checked onchange="recalc()"></td>
+      <td class="input-cell"><input type="checkbox" id="chk_sun" checked onchange="onDayToggle(this,'sun')"></td>
       <td class="input-cell"><input type="text" class="dur" id="prod_sun" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
       <td class="input-cell"><input type="text" class="dur" id="coach_sun" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
       <td class="input-cell"><input type="text" class="dur" id="meet_sun" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
@@ -1879,7 +1919,7 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     </tr>
     <tr class="bg-gray" id="row_mon">
       <td class="left">MONDAY</td>
-      <td class="input-cell"><input type="checkbox" id="chk_mon" checked onchange="recalc()"></td>
+      <td class="input-cell"><input type="checkbox" id="chk_mon" checked onchange="onDayToggle(this,'mon')"></td>
       <td class="input-cell"><input type="text" class="dur" id="prod_mon" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
       <td class="input-cell"><input type="text" class="dur" id="coach_mon" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
       <td class="input-cell"><input type="text" class="dur" id="meet_mon" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
@@ -1893,7 +1933,7 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     </tr>
     <tr class="bg-gray" id="row_tue">
       <td class="left">TUESDAY</td>
-      <td class="input-cell"><input type="checkbox" id="chk_tue" checked onchange="recalc()"></td>
+      <td class="input-cell"><input type="checkbox" id="chk_tue" checked onchange="onDayToggle(this,'tue')"></td>
       <td class="input-cell"><input type="text" class="dur" id="prod_tue" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
       <td class="input-cell"><input type="text" class="dur" id="coach_tue" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
       <td class="input-cell"><input type="text" class="dur" id="meet_tue" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
@@ -1907,7 +1947,7 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     </tr>
     <tr class="bg-gray" id="row_wed">
       <td class="left">WEDNESDAY</td>
-      <td class="input-cell"><input type="checkbox" id="chk_wed" checked onchange="recalc()"></td>
+      <td class="input-cell"><input type="checkbox" id="chk_wed" checked onchange="onDayToggle(this,'wed')"></td>
       <td class="input-cell"><input type="text" class="dur" id="prod_wed" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
       <td class="input-cell"><input type="text" class="dur" id="coach_wed" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
       <td class="input-cell"><input type="text" class="dur" id="meet_wed" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
@@ -1921,7 +1961,7 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     </tr>
     <tr class="bg-gray" id="row_thu">
       <td class="left">THURSDAY</td>
-      <td class="input-cell"><input type="checkbox" id="chk_thu" checked onchange="recalc()"></td>
+      <td class="input-cell"><input type="checkbox" id="chk_thu" checked onchange="onDayToggle(this,'thu')"></td>
       <td class="input-cell"><input type="text" class="dur" id="prod_thu" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
       <td class="input-cell"><input type="text" class="dur" id="coach_thu" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
       <td class="input-cell"><input type="text" class="dur" id="meet_thu" value="00:00" placeholder="HH:MM" maxlength="5" onchange="recalc()" oninput="fmtDurInput(this)"></td>
@@ -2255,6 +2295,114 @@ function autoCalcDaysLeft() {
   const val = Math.max(1, daysAfterToday);
   const el = document.getElementById('daysLeft');
   if (el) el.value = val;
+}
+
+
+// ── Leave type popup when a working day is toggled OFF ──
+function onDayToggle(chkEl, day) {
+  if (chkEl.checked) {
+    // Turned back ON — clear leave for today's date from attendance
+    const dateKey = getDayDateKey(day);
+    if (dateKey && attData[dateKey]) {
+      delete attData[dateKey];
+      lsSet('att_data', attData);
+      if (typeof window._getLocalData === 'function') {} // local binding updated
+    }
+    recalc();
+    return;
+  }
+  // Turned OFF — show leave picker
+  _showLeavePickerForDay(day, chkEl);
+}
+
+function getDayDateKey(day) {
+  // Map day name to actual date in current week
+  const DAY_JS = { sun:0, mon:1, tue:2, wed:3, thu:4 };
+  const jsDay = DAY_JS[day];
+  if (jsDay === undefined) return null;
+  const today = new Date();
+  const todayJs = today.getDay();
+  // Find the Saturday that starts this week
+  const daysFromSat = (todayJs === 6) ? 0 : (todayJs + 1); // sat=6 in JS
+  const sat = new Date(today);
+  sat.setDate(today.getDate() - daysFromSat);
+  // day offset from Saturday: sat=0,sun=1,mon=2,tue=3,wed=4,thu=5,fri=6
+  const POS_FROM_SAT = { sun:1, mon:2, tue:3, wed:4, thu:5 };
+  const offset = POS_FROM_SAT[day];
+  const target = new Date(sat);
+  target.setDate(sat.getDate() + offset);
+  const y = target.getFullYear();
+  const m = String(target.getMonth()+1).padStart(2,'0');
+  const d = String(target.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+
+function _showLeavePickerForDay(day, chkEl) {
+  const old = document.getElementById('leavePickerPopup');
+  if (old) old.remove();
+
+  const isDark = document.body.classList.contains('dark');
+  const bg = isDark ? '#1a1a1a' : '#fff';
+  const border = isDark ? '#333' : '#1C2B3A';
+  const txt = isDark ? '#e8e8e8' : '#1C2B3A';
+
+  const dayLabel = day.toUpperCase();
+  const dateKey = getDayDateKey(day);
+
+  const popup = document.createElement('div');
+  popup.id = 'leavePickerPopup';
+  popup.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:${bg};border:2px solid ${border};border-radius:12px;padding:20px 24px;z-index:99999;min-width:260px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.35);font-family:Lexend,sans-serif;`;
+
+  const leaveTypes = [
+    { code:'PL', label:'Planned Leave',   color:'#f0ad4e' },
+    { code:'UL', label:'Unplanned Leave', color:'#e74c3c' },
+    { code:'HL', label:'Half-day Leave',  color:'#9b59b6' },
+    { code:'SL', label:'Sick Leave',      color:'#3498db' },
+  ];
+
+  const btns = leaveTypes.map(lt => 
+    `<button onclick="_applyLeaveForDay('${day}','${lt.code}',this)" 
+      style="flex:1;min-width:48%;padding:10px 4px;font-family:Lexend,sans-serif;font-size:10px;font-weight:700;
+             background:${lt.color}22;color:${lt.color};border:2px solid ${lt.color};border-radius:8px;cursor:pointer;line-height:1.3;">
+       <strong>${lt.code}</strong><br><span style="font-size:8px;font-weight:400;opacity:0.85;">${lt.label}</span>
+     </button>`
+  ).join('');
+
+  popup.innerHTML = `
+    <div style="font-size:11px;font-weight:700;color:${txt};margin-bottom:4px;">${dayLabel} — Mark Leave</div>
+    <div style="font-size:9px;color:#888;margin-bottom:16px;">${dateKey || 'this day'} · Day will be disabled</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">${btns}</div>
+    <button onclick="_cancelLeavePicker('${day}')" 
+      style="width:100%;padding:8px;font-family:Lexend,sans-serif;font-size:10px;font-weight:700;
+             background:transparent;border:1.5px solid #ccd6e0;border-radius:8px;cursor:pointer;color:#888;">
+      Cancel (keep day ON)
+    </button>`;
+
+  document.body.appendChild(popup);
+  popup._chkEl = chkEl; // store ref
+}
+
+function _applyLeaveForDay(day, leaveCode, btnEl) {
+  const dateKey = getDayDateKey(day);
+  if (dateKey) {
+    attData[dateKey] = leaveCode;
+    lsSet('att_data', attData);
+    // trigger re-render if attendance is open
+    if (document.getElementById('attendanceModal')?.classList.contains('open')) {
+      if (typeof renderAttCalendar === 'function') renderAttCalendar();
+    }
+  }
+  document.getElementById('leavePickerPopup')?.remove();
+  recalc();
+  if (window.saveUserData) window.saveUserData();
+}
+
+function _cancelLeavePicker(day) {
+  // Re-enable the checkbox since user cancelled
+  const chk = document.getElementById('chk_' + day);
+  if (chk) chk.checked = true;
+  document.getElementById('leavePickerPopup')?.remove();
+  recalc();
 }
 
 function recalc() {
@@ -2886,10 +3034,11 @@ function undoLastAction() {
 }
 
 function _updateUndoBtn() {
+  const disabled = _undoStack.length === 0;
   const btn = document.getElementById('undoBtn');
   if (!btn) return;
-  btn.disabled = _undoStack.length === 0;
-  btn.style.opacity = _undoStack.length === 0 ? '0.4' : '1';
+  btn.disabled = disabled;
+  btn.style.opacity = disabled ? '0.4' : '1';
 }
 
 // Ctrl+Z / Cmd+Z global undo
