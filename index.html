@@ -2537,7 +2537,7 @@ function recalc() {
     const brk = getInputMins('break_' + d);
     const un = getInputMins('unavail_' + d);
     const jobs = parseInt(document.getElementById('jobs_' + d)?.value || 0);
-    const aux = coach + meet + well + brk + un;
+    const aux = coach + meet + well;
     const billing = prod + coach + meet + well;
     const util = billing > 0 ? prod / billing : null;
 
@@ -2557,7 +2557,7 @@ function recalc() {
     }
   });
 
-  const totAux = totCoach + totMeet + totWell + totBreak + totUnavail;
+  const totAux = totCoach + totMeet + totWell;
   const totBilling = totProd + totCoach + totMeet + totWell;
   const totUtil = totBilling > 0 ? totProd / totBilling : null;
 
