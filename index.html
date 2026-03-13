@@ -1035,6 +1035,10 @@
   .tour-btn-next { background:#1C2B3A; color:#fff; border:none; }
   .tour-btn-skip { background:transparent; color:#888; border:1.5px solid #dde; }
   body.dark .tour-btn-skip { border-color:#333; }
+
+  body.dark #dbExportCard { background:#1a1a1a !important; border-color:#333 !important; }
+  body.dark #dbExportCard span, body.dark #dbExportCard label { color:#e8e8e8 !important; }
+  body.dark #dbExportCard .dep-item { background:#111 !important; border-color:#333 !important; }
 </style>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -1412,6 +1416,11 @@ body.dark .db-modal-card { background: #1a1a1a; border-color: #333; box-shadow: 
 }
 .db-modal-header h4 { font-size: 13px; font-weight: 700; color: #1C2B3A; letter-spacing: 0.5px; }
 body.dark .db-modal-header h4 { color: #e8e8e8; }
+.db-hdr-btn { padding:4px 12px; font-family:'Lexend',sans-serif; font-size:9px; font-weight:700; border-radius:6px; cursor:pointer; white-space:nowrap; min-width:72px; text-align:center; }
+.db-hdr-btn-red { background:rgba(192,57,43,0.12); color:#c0392b; border:1.5px solid #c0392b; }
+.db-hdr-btn-blue { background:rgba(28,43,58,0.08); color:#1C2B3A; border:1.5px solid #1C2B3A; }
+body.dark .db-hdr-btn-blue { color:#7ab; border-color:#7ab; background:rgba(122,171,188,0.1); }
+.db-hdr-btn:active { opacity:0.75; }
 
 /* ===== ATTENDANCE MODAL ===== */
 #attendanceModal {
@@ -1883,13 +1892,31 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
   <div class="db-modal-card">
     <div class="db-modal-header">
       <h4>📊 DATABASE — PUSHED SNAPSHOTS</h4>
-      <div style="display:flex;gap:6px;align-items:center;">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         <span class="db-push-msg" id="dbPushMsg"></span>
-        <button onclick="clearAllDb()" style="padding:2px 8px;font-family:'Lexend',sans-serif;font-size:8px;font-weight:700;background:transparent;color:#c0392b;border:1px solid #c0392b;border-radius:6px;cursor:pointer;">CLEAR ALL</button>
-        <button onclick="showDbTab()" style="padding:4px 12px;font-family:'Lexend',sans-serif;font-size:9px;font-weight:700;background:rgba(192,57,43,0.15);color:#c0392b;border:1.5px solid #c0392b;border-radius:6px;cursor:pointer;">✕ CLOSE</button>
+        <button onclick="openDbExportPicker()" class="db-hdr-btn db-hdr-btn-blue">📥 EXPORT</button>
+        <button onclick="clearAllDb()" class="db-hdr-btn db-hdr-btn-red">CLEAR ALL</button>
+        <button onclick="showDbTab()" class="db-hdr-btn db-hdr-btn-red">✕ CLOSE</button>
       </div>
     </div>
     <div id="dbEntriesList"><div class="db-empty">No snapshots yet. Click "Push to Database" to capture the main table.</div></div>
+  </div>
+</div>
+
+<!-- ======== DB EXPORT PICKER ======== -->
+<div id="dbExportPicker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9000;align-items:center;justify-content:center;font-family:'Lexend',sans-serif;">
+  <div id="dbExportCard" style="background:#fff;border:2px solid #1C2B3A;border-radius:14px;padding:20px 22px;width:90vw;max-width:480px;max-height:80vh;display:flex;flex-direction:column;gap:0;box-shadow:0 12px 40px rgba(0,0,0,0.3);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <span style="font-size:12px;font-weight:700;color:#1C2B3A;letter-spacing:0.5px;">📥 SELECT WEEKS TO EXPORT</span>
+      <button onclick="closeDbExportPicker()" style="background:transparent;border:none;font-size:16px;cursor:pointer;color:#888;">✕</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button onclick="dbExportSelectAll()" style="flex:1;padding:5px;font-family:'Lexend',sans-serif;font-size:9px;font-weight:700;border:1.5px solid #1C2B3A;border-radius:6px;background:transparent;color:#1C2B3A;cursor:pointer;">SELECT ALL</button>
+      <button onclick="dbExportSelectNone()" style="flex:1;padding:5px;font-family:'Lexend',sans-serif;font-size:9px;font-weight:700;border:1.5px solid #aaa;border-radius:6px;background:transparent;color:#888;cursor:pointer;">CLEAR</button>
+    </div>
+    <div id="dbExportList" style="overflow-y:auto;flex:1;max-height:340px;display:flex;flex-direction:column;gap:5px;margin-bottom:14px;padding-right:2px;"></div>
+    <button onclick="runDbExportPDF()" style="width:100%;padding:10px;font-family:'Lexend',sans-serif;font-size:11px;font-weight:700;background:#1C2B3A;color:#fff;border:none;border-radius:8px;cursor:pointer;letter-spacing:0.5px;">📄 EXPORT SELECTED AS PDF</button>
+    <div id="dbExportMsg" style="font-size:9px;color:#c0392b;text-align:center;margin-top:6px;min-height:14px;"></div>
   </div>
 </div>
 
@@ -3045,6 +3072,82 @@ function checkDelReady() {
   document.getElementById('del-confirm-btn').disabled = pw.length < 1;
 }
 
+
+// ═══════════════ DB EXPORT PICKER ═══════════════
+function openDbExportPicker() {
+  if (!dbEntries || !dbEntries.length) {
+    alert('No database snapshots to export.');
+    return;
+  }
+  const picker = document.getElementById('dbExportPicker');
+  const list = document.getElementById('dbExportList');
+  picker.style.display = 'flex';
+  // Build checklist
+  list.innerHTML = dbEntries.map((e, i) => `
+    <label class="dep-item" data-idx="${i}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1.5px solid #dde;border-radius:8px;cursor:pointer;background:#f8fbff;user-select:none;">
+      <input type="checkbox" data-idx="${i}" checked style="width:16px;height:16px;cursor:pointer;accent-color:#1C2B3A;">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#1C2B3A;">${e.week}</div>
+        <div style="font-size:8px;color:#888;margin-top:1px;">Pushed: ${e.pushedAt}${e.accuracy ? ' · Accuracy: '+e.accuracy.accPct+'%' : ''}</div>
+      </div>
+    </label>
+  `).join('');
+  document.getElementById('dbExportMsg').textContent = '';
+}
+
+function closeDbExportPicker() {
+  document.getElementById('dbExportPicker').style.display = 'none';
+}
+
+function dbExportSelectAll() {
+  document.querySelectorAll('#dbExportList input[type=checkbox]').forEach(c => c.checked = true);
+}
+function dbExportSelectNone() {
+  document.querySelectorAll('#dbExportList input[type=checkbox]').forEach(c => c.checked = false);
+}
+
+function runDbExportPDF() {
+  const selected = [...document.querySelectorAll('#dbExportList input[type=checkbox]')]
+    .filter(c => c.checked)
+    .map(c => parseInt(c.dataset.idx));
+  if (!selected.length) {
+    document.getElementById('dbExportMsg').textContent = 'Please select at least one week to export.';
+    return;
+  }
+  closeDbExportPicker();
+  const entries = selected.map(i => dbEntries[i]);
+  const win = window.open('', '_blank');
+  let h = `<html><head><title>WorkPlace DB Export</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:10px;padding:20px;}
+    h2{color:#1C2B3A;margin-bottom:16px;font-size:16px;}
+    .entry{margin-bottom:28px;page-break-inside:avoid;}
+    .entry-header{background:#1C2B3A;color:#fff;padding:7px 12px;font-weight:700;font-size:10px;border-radius:4px 4px 0 0;}
+    table{width:100%;border-collapse:collapse;margin-top:0;}
+    th{background:#DDE4EC;padding:5px 6px;font-size:8px;border:1px solid #bbb;text-align:center;}
+    td{padding:4px 6px;font-size:9px;border:1px solid #ddd;text-align:center;}
+    td:first-child{text-align:left;font-weight:700;}
+    .total{background:#e8f0fe;font-weight:700;}
+    .balance{background:#fff3cd;font-weight:700;}
+    @media print{@page{size:landscape;margin:10mm;}}
+  </style></head><body>
+  <h2>📊 WorkPlace — Database Export (${entries.length} week${entries.length>1?'s':''})</h2>`;
+  entries.forEach(e => {
+    const acc = e.accuracy;
+    h += `<div class="entry"><div class="entry-header">📅 ${e.week} &nbsp;|&nbsp; Pushed: ${e.pushedAt}${acc ? ` &nbsp;|&nbsp; 🎯 Accuracy: ${acc.accPct}% · Error Rate: ${acc.errPct}%` : ''}</div>
+    <table><tr><th>DAY</th><th>PROD</th><th>COACH</th><th>MEET</th><th>WELL</th><th>BREAK</th><th>UNAVAIL</th><th>AUX</th><th>UTIL</th><th>JOBS</th><th>BILLING</th></tr>`;
+    e.rows.forEach(r => {
+      const cls = r.type === 'total' ? 'total' : r.type === 'balance' ? 'balance' : '';
+      h += `<tr class="${cls}"><td>${r.label}</td><td>${r.prod}</td><td>${r.coach}</td><td>${r.meet}</td><td>${r.well}</td><td>${r.brk}</td><td>${r.unavail}</td><td>${r.aux}</td><td>${r.util}</td><td>${r.jobs}</td><td>${r.billing}</td></tr>`;
+    });
+    h += `</table></div>`;
+  });
+  h += `</body></html>`;
+  win.document.write(h);
+  win.document.close();
+  win.print();
+}
+// ════════════════════════════════════════
 function exportDbBeforeDelete() {
   // Reuse the existing PDF export or just open print dialog with db entries
   if (!dbEntries.length) { alert('No database entries to export.'); return; }
