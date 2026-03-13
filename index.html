@@ -1816,7 +1816,6 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <span class="tb-week tb-desktop-show" id="weekLabelBar">–</span>
     </div>
-    <button class="tb-sqbtn tb-sqbtn-lg" onclick="openSettings()" title="Settings">⚙</button>
   </div>
 
   <!-- ROW 2 — DESKTOP: ☁SYNC | ⟳REFRESH | ⏏LOGOUT | clock | WD -->
@@ -1834,7 +1833,7 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     <div class="tb-desktop-show" style="margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0;">
       <span id="logoutTimeBadge2" class="tb-logout-badge" style="font-size:11px;">🕐 –</span>
       <span class="tb-time" id="timeNow"></span>
-      <span class="tb-wd">WD:<strong id="workingDays">5</strong></span>
+      <span class="tb-wd" style="display:none;">WD:<strong id="workingDays">5</strong></span>
     </div>
     <button onclick="authSignOut()" class="tb-btn2 tb-btn2-red tb-desktop-show">⏏ LOGOUT</button>
   </div>
@@ -2737,29 +2736,23 @@ function recalc() {
   // Normal days → target = tBilling (fixed daily billing target e.g. 8:31)
   // Last day (daysLeft=1) → target = remTotal (whatever is left to finish the week)
   (function() {
-    const badge = document.getElementById('logoutTimeBadge');
-    if (!badge) return;
-    // Last day: remTotal already = wTotBilling − totBilling (today's done IS already deducted)
-    //           so remainMins = remTotal directly — don't subtract doneMins again.
-    // Normal days: tBilling is the FULL daily target, so subtract today's done.
+    // Update both desktop badge (logoutTimeBadge2) and any mobile badge (logoutTimeBadge)
     const doneMins = todayBillingActual;
     const remainMins = (daysLeft <= 1)
-      ? Math.max(0, remTotal)                        // last day: weekly balance = what's left
-      : Math.max(0, tBilling - doneMins);            // normal day: daily target minus done today
-    if (remainMins <= 0 && doneMins <= 0) { badge.textContent = ''; return; }
+      ? Math.max(0, remTotal)
+      : Math.max(0, tBilling - doneMins);
+    const badgeEls = ['logoutTimeBadge','logoutTimeBadge2'].map(id=>document.getElementById(id)).filter(Boolean);
+    if (!badgeEls.length) return;
     const now = new Date();
     const logoutMs = now.getTime() + remainMins * 60000;
     const lo = new Date(logoutMs);
     const hh = lo.getHours(), mm = lo.getMinutes();
     const ampm = hh >= 12 ? 'PM' : 'AM';
     const hh12 = hh % 12 || 12;
-    badge.textContent = `Logout: ${hh12}:${String(mm).padStart(2,'0')} ${ampm}`;
-    const badge2 = document.getElementById('logoutTimeBadge2');
-    if (badge2) badge2.textContent = badge.textContent;
-    // Tooltip shows full breakdown
+    const txt = (remainMins <= 0 && doneMins <= 0) ? '' : `Logout: ${hh12}:${String(mm).padStart(2,'0')} ${ampm}`;
     const fmt = m => `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;
     const targetForTooltip = (daysLeft <= 1) ? remTotal : tBilling;
-    badge.title = `Target: ${fmt(targetForTooltip)} | Done: ${fmt(doneMins)} | Left: ${fmt(remainMins)}`;
+    badgeEls.forEach(b => { b.textContent = txt; b.title = `Target: ${fmt(targetForTooltip)} | Done: ${fmt(doneMins)} | Left: ${fmt(remainMins)}`; });
   })();
 
   // Color util green/red
