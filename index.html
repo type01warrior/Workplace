@@ -2152,7 +2152,7 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     <div class="stat-panel">
       <div class="stat-panel-header">
         <span class="stat-panel-title">Today</span>
-        <span class="stat-panel-col-label" id="today_day_label">–</span>
+
       </div>
       <div class="stat-row" style="display:none;"><span id="today_day_val"></span></div>
       <div class="stat-row"><span class="stat-label">Production</span><span class="stat-val" id="today_prod_bal">–</span></div>
@@ -2724,7 +2724,6 @@ function recalc() {
     return `<span style="color:${color};font-weight:700;">${label}</span>`;
   }
 
-  setText('today_day_label', todayName + ' — TODAY TARGET');
   setText('today_day_val', fmtTime(todayBillingTarget));
   setHtml('today_prod_bal', todayBal(prodDiff, false));
   setHtml('today_aux_bal',  todayBal(auxDiff, true));   // red if exceeded, green if within
