@@ -1391,8 +1391,12 @@ tr.row-disabled td.input-cell input[type="checkbox"] { pointer-events: auto !imp
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.55); z-index: 8500;
   align-items: flex-start; justify-content: center;
-  padding-top: 40px; font-family: 'Lexend', sans-serif;
+  padding-top: max(56px, env(safe-area-inset-top, 56px));
+  font-family: 'Lexend', sans-serif;
   overflow-y: auto;
+}
+@media screen and (min-width:769px) {
+  #dbModal { padding-top: 40px; }
 }
 #dbModal.open { display: flex; }
 .db-modal-card {
@@ -1414,10 +1418,13 @@ body.dark .db-modal-header h4 { color: #e8e8e8; }
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.55); z-index: 8500;
   align-items: flex-start; justify-content: center;
-  padding: 8px 4px 20px;
+  padding: max(56px, env(safe-area-inset-top, 56px)) 4px 20px;
   font-family: 'Lexend', sans-serif;
   overflow-y: auto; overflow-x: hidden;
   box-sizing: border-box;
+}
+@media screen and (min-width:769px) {
+  #attendanceModal { padding: 8px 4px 20px; }
 }
 #attendanceModal.open { display: flex; }
 .att-card {
@@ -1807,7 +1814,6 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     <button class="tb-sqbtn" onclick="toggleDarkMode()" title="Toggle light/dark mode"><span id="dm-icon">☀️</span></button>
     <span class="tb-username" id="topNameSpan">Mohammed Akram Khan</span>
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <span id="logoutTimeBadge" class="tb-logout-badge tb-desktop-show">🕐 –</span>
       <span class="tb-week tb-desktop-show" id="weekLabelBar">–</span>
     </div>
     <button class="tb-sqbtn tb-sqbtn-lg" onclick="openSettings()" title="Settings">⚙</button>
