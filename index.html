@@ -4362,6 +4362,11 @@ function setLeave(type) {
   lsSet('att_data', attData);
   hideLeavePicker();
   renderAttCalendar();
+  // Live-update DB modal if it's open
+  const dbModal = document.getElementById('dbModal');
+  if (dbModal && dbModal.classList.contains('open') && typeof renderDbEntries === 'function') {
+    renderDbEntries();
+  }
 }
 
 function hideLeavePicker() {
@@ -4586,6 +4591,15 @@ function _backfillDbLeaveStatus() {
   if (!Array.isArray(dbEntries) || !dbEntries.length) return;
   const dayOffsets = { SUNDAY:-5, MONDAY:-4, TUESDAY:-3, WEDNESDAY:-2, THURSDAY:-1, FRIDAY:0, SATURDAY:-6 };
   const validCodes = ['PL','UL','HL','SL'];
+  const fullLeaveCodes = ['PL','UL','SL']; // HL can coexist with work
+  const parseHM = v => {
+    if (v === null || v === undefined) return 0;
+    const s = String(v).trim();
+    if (!s || s === '–') return 0;
+    const m = /^(-?)(\d+):(\d+)$/.exec(s);
+    if (!m) return 0;
+    return (m[1] === '-' ? -1 : 1) * (parseInt(m[2], 10) * 60 + parseInt(m[3], 10));
+  };
   let changed = false;
   dbEntries.forEach(entry => {
     const friMs = _parseWeekDate(entry.week);
@@ -4600,6 +4614,15 @@ function _backfillDbLeaveStatus() {
         if (!r.status) r.status = tagMatch[2].toUpperCase();
         changed = true;
       }
+      // Compute whether this day has logged work
+      const worked = (parseHM(r.prod) + parseHM(r.coach) + parseHM(r.meet) + parseHM(r.well)) > 0;
+      const curStatus = (r.status || '').toUpperCase();
+      // Self-heal: if currently flagged as full leave (PL/UL/SL) but day actually has work logged,
+      // clear the stale status so the row isn't shown as leave anymore.
+      if (worked && fullLeaveCodes.includes(curStatus)) {
+        r.status = '';
+        changed = true;
+      }
       if (validCodes.includes((r.status || '').toUpperCase())) return;
       // Look up by computed date in attData (calendar)
       const upper = (r.label || '').toUpperCase();
@@ -4609,10 +4632,11 @@ function _backfillDbLeaveStatus() {
       t.setDate(friDate.getDate() + off);
       const dateKey = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
       const code = (attData && attData[dateKey] || '').toUpperCase();
-      if (validCodes.includes(code)) {
-        r.status = code;
-        changed = true;
-      }
+      if (!validCodes.includes(code)) return;
+      // Only apply a full-leave color when the day has no logged work; HL can apply regardless
+      if (fullLeaveCodes.includes(code) && worked) return;
+      r.status = code;
+      changed = true;
     });
   });
   if (changed) lsSet('db_snapshots', dbEntries);
@@ -4837,10 +4861,14 @@ function clearAllDb() {
 }
 
 // ===== MANUAL ENTRY (Add Historical Week) =====
-const ME_DAYS = ['sun','mon','tue','wed','thu'];
-const ME_DAY_LABELS = { sun:'SUNDAY', mon:'MONDAY', tue:'TUESDAY', wed:'WEDNESDAY', thu:'THURSDAY' };
+const ME_ALL_DAYS_ORDER = ['sat','sun','mon','tue','wed','thu','fri']; // Sat→Fri
+const ME_DAY_LABELS = { sat:'SATURDAY', sun:'SUNDAY', mon:'MONDAY', tue:'TUESDAY', wed:'WEDNESDAY', thu:'THURSDAY', fri:'FRIDAY' };
+const ME_DAY_SHORT  = { sat:'Sat', sun:'Sun', mon:'Mon', tue:'Tue', wed:'Wed', thu:'Thu', fri:'Fri' };
+const ME_DAY_OFFSET = { sat:-6, sun:-5, mon:-4, tue:-3, wed:-2, thu:-1, fri:0 }; // relative to Friday
 const ME_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-let _meSelectedFri = null; // Date object for Friday of selected week
+let _meSelectedFri = null;     // Date object for Friday of selected week
+let _meWeekOff = null;         // Set of 2 day codes for this week's offs
+let ME_DAYS = ['sun','mon','tue','wed','thu']; // dynamic 5 working days, populated in Step 2
 
 function openManualEntryModal() {
   _meSelectedFri = null;
@@ -4851,6 +4879,7 @@ function openManualEntryModal() {
 function closeManualEntryModal() {
   document.getElementById('manualEntryModal').classList.remove('open');
   _meSelectedFri = null;
+  _meWeekOff = null;
 }
 
 function _meDaySuffix(d) {
@@ -4935,12 +4964,72 @@ function _meContinue() {
     return;
   }
   _meSelectedFri = fri;
+  _meRenderStep1b();
+}
+
+function _meRenderStep1b() {
+  const label = _meBuildLabel(_meSelectedFri);
+  document.getElementById('meTitle').textContent = '➕ ADD HISTORICAL WEEK — Step 2: Week Off Days';
+  // Default selection: previous selection, else the user's current global weekOffDays, else Sat
+  if (!_meWeekOff || _meWeekOff.size !== 2) {
+    const def = (typeof weekOffDays !== 'undefined' && weekOffDays.size === 2)
+      ? [...weekOffDays]
+      : ['sat','fri'];
+    _meWeekOff = new Set(def);
+  }
+  const pillsHtml = ME_ALL_DAYS_ORDER.map(d =>
+    `<span class="wo-pill ${_meWeekOff.has(d) ? 'active' : ''}" data-day="${d}" onclick="_meToggleWeekOff('${d}')">${ME_DAY_SHORT[d]}</span>`
+  ).join('');
+  document.getElementById('meStepBody').innerHTML = `
+    <div class="me-week-banner">
+      <span>📅 ${label} &nbsp; · &nbsp; Sat ${_meSatStr()} → Fri ${_meFriStr()}</span>
+      <button class="me-btn me-btn-outline" style="background:#fff;color:#1E90FF;border-color:#fff;padding:4px 10px;" onclick="_meRenderStep1()">← Change Week</button>
+    </div>
+    <div style="font-size:10px;color:#666;margin-bottom:14px;line-height:1.6;">
+      Select <strong>exactly 2 week-off days</strong> for this week. The remaining 5 days will appear as working days in the next step.
+    </div>
+    <div class="weekoff-pills" id="meWoPills" style="margin-bottom:14px;">${pillsHtml}</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px;">
+      <button class="me-btn me-btn-outline" onclick="_meRenderStep1()">← BACK</button>
+      <button class="me-btn" onclick="_meContinueToStep2()">CONTINUE →</button>
+    </div>
+    <div class="me-err" id="meStep1bErr"></div>
+  `;
+}
+
+function _meToggleWeekOff(day) {
+  if (!_meWeekOff) _meWeekOff = new Set();
+  if (_meWeekOff.has(day)) {
+    _meWeekOff.delete(day);
+  } else {
+    if (_meWeekOff.size >= 2) {
+      // Remove the oldest selection to keep exactly 2
+      const first = [..._meWeekOff][0];
+      _meWeekOff.delete(first);
+    }
+    _meWeekOff.add(day);
+  }
+  // Re-render just the pills
+  document.querySelectorAll('#meWoPills .wo-pill').forEach(p => {
+    p.classList.toggle('active', _meWeekOff.has(p.dataset.day));
+  });
+  document.getElementById('meStep1bErr').textContent = '';
+}
+
+function _meContinueToStep2() {
+  const errEl = document.getElementById('meStep1bErr');
+  if (!_meWeekOff || _meWeekOff.size !== 2) {
+    errEl.textContent = 'Please select exactly 2 week-off days.';
+    return;
+  }
   _meRenderStep2();
 }
 
 function _meRenderStep2() {
   const label = _meBuildLabel(_meSelectedFri);
-  document.getElementById('meTitle').textContent = '➕ ADD HISTORICAL WEEK — Step 2: Enter Data';
+  document.getElementById('meTitle').textContent = '➕ ADD HISTORICAL WEEK — Step 3: Enter Data';
+  // Build working-day list from selected weekoffs (Sat→Fri order, minus the 2 offs)
+  ME_DAYS = ME_ALL_DAYS_ORDER.filter(d => !_meWeekOff.has(d));
   const statusCodes = ['PL','UL','HL','SL'];
   const dayRows = ME_DAYS.map(d => {
     const pills = statusCodes.map(c =>
@@ -5008,7 +5097,7 @@ function _meRenderStep2() {
     </table>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
-      <button class="me-btn me-btn-outline" onclick="_meRenderStep1()">← BACK</button>
+      <button class="me-btn me-btn-outline" onclick="_meRenderStep1b()">← BACK</button>
       <button class="me-btn" onclick="_meSave()">💾 SAVE WEEK</button>
     </div>
     <div class="me-err" id="meStep2Err"></div>
@@ -5025,10 +5114,9 @@ function _meFriStr() {
 }
 
 function _meDateForDay(d) {
-  // d='sun'/'mon'/'tue'/'wed'/'thu'. Sat=fri-6, Sun=fri-5, Mon=fri-4, Tue=fri-3, Wed=fri-2, Thu=fri-1
-  const offsets = { sun:-5, mon:-4, tue:-3, wed:-2, thu:-1 };
+  // Day → date offset relative to Friday end-of-week
   const t = new Date(_meSelectedFri);
-  t.setDate(_meSelectedFri.getDate() + offsets[d]);
+  t.setDate(_meSelectedFri.getDate() + (ME_DAY_OFFSET[d] ?? 0));
   return t;
 }
 function _meDateKey(d) {
