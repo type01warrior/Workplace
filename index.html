@@ -2724,6 +2724,7 @@ function recalc() {
 
   // Per-day calculations
   let totProd = 0, totCoach = 0, totMeet = 0, totWell = 0, totBreak = 0, totUnavail = 0, totJobs = 0;
+  const utilSamples = []; // arithmetic mean of daily utils across working days with billing > 0
 
   DAYS.forEach(d => {
     const prod = getInputMins('prod_' + d);
@@ -2732,7 +2733,7 @@ function recalc() {
     const well = getInputMins('well_' + d);
     const brk = getInputMins('break_' + d);
     const un = getInputMins('unavail_' + d);
-    const jobs = parseInt(document.getElementById('jobs_' + d)?.value || 0);
+    const jobs = parseInt(document.getElementById('jobs_' + d)?.value, 10) || 0;
     const aux = coach + meet + well;
     const billing = prod + coach + meet + well;
     const util = billing > 0 ? prod / billing : null;
@@ -2750,12 +2751,16 @@ function recalc() {
       totBreak += brk;
       totUnavail += un;
       totJobs += jobs;
+      if (util !== null) utilSamples.push(util);
     }
   });
 
   const totAux = totCoach + totMeet + totWell;
   const totBilling = totProd + totCoach + totMeet + totWell;
-  const totUtil = totBilling > 0 ? totProd / totBilling : null;
+  // Total Utilization = arithmetic mean (AVG) of daily utilizations across working days
+  const totUtil = utilSamples.length
+    ? (utilSamples.reduce((a,b) => a+b, 0) / utilSamples.length)
+    : null;
 
   setText('tot_prod', fmtTime(totProd));
   setText('tot_coach', fmtTime(totCoach));
@@ -3594,6 +3599,11 @@ function initUserStorage(uid) {
   attData = lsGet('att_data', '{}');
   dbEntries = lsGet('db_snapshots', '[]');
   if (typeof _backfillDbLeaveStatus === 'function') _backfillDbLeaveStatus();
+  // Recompute totals for every existing entry — fixes any stale jobs sum / weighted util
+  if (typeof _recomputeEntryTotals === 'function') {
+    dbEntries.forEach(e => _recomputeEntryTotals(e));
+    lsSet('db_snapshots', dbEntries);
+  }
   if (typeof _sortDbEntriesDesc === 'function') _sortDbEntriesDesc();
   // Load half-day flags for current week
   const hd = lsGet('half_days', '[]');
@@ -4617,6 +4627,89 @@ function _sortDbEntriesDesc() {
   });
 }
 
+function _recomputeEntryTotals(entry) {
+  // Recomputes per-day AUX/UTIL/BILLING and the TOTAL USED + TOTAL BALANCE rows
+  // from raw PROD/COACH/MEET/WELL/BREAK/UNAVAIL/JOBS values.
+  if (!entry || !Array.isArray(entry.rows)) return;
+  const parseHM = v => {
+    if (v === null || v === undefined) return 0;
+    const s = String(v).trim();
+    if (!s || s === '–') return 0;
+    const m = /^(-?)(\d+):(\d+)$/.exec(s);
+    if (!m) return 0;
+    return (m[1] === '-' ? -1 : 1) * (parseInt(m[2], 10) * 60 + parseInt(m[3], 10));
+  };
+  const parseJobs = v => parseInt((v ?? '').toString().replace(/[^0-9-]/g, ''), 10) || 0;
+
+  let TP=0,TC=0,TM=0,TW=0,TB=0,TU=0,TJ=0;
+  const utilSamples = [];
+  let target = null, total = null, balance = null;
+
+  entry.rows.forEach(r => {
+    if (r.type === 'target') target = r;
+    else if (r.type === 'total') total = r;
+    else if (r.type === 'balance') balance = r;
+    else if (r.type === 'day') {
+      const prod = parseHM(r.prod);
+      const coach = parseHM(r.coach);
+      const meet = parseHM(r.meet);
+      const well = parseHM(r.well);
+      const brk = parseHM(r.brk);
+      const unavail = parseHM(r.unavail);
+      const jobs = parseJobs(r.jobs);
+      const aux = coach + meet + well;
+      const billing = prod + coach + meet + well;
+      const util = billing > 0 ? prod / billing : null;
+      r.aux = fmtTime(aux);
+      r.util = util !== null ? fmtPct(util) : '–';
+      r.billing = fmtTime(billing);
+      // Skip full-leave days from totals (status ∈ PL/UL/SL); HL counts (matches live recalc semantics)
+      const status = (r.status || '').toUpperCase();
+      const isFullLeave = ['PL','UL','SL'].includes(status);
+      const isWorkingDay = (r.checked !== false) && !isFullLeave;
+      if (isWorkingDay) {
+        TP+=prod; TC+=coach; TM+=meet; TW+=well; TB+=brk; TU+=unavail; TJ+=jobs;
+        if (util !== null) utilSamples.push(util);
+      }
+    }
+  });
+
+  const totAux = TC+TM+TW;
+  const totBilling = TP+TC+TM+TW;
+  const totUtil = utilSamples.length
+    ? (utilSamples.reduce((a,b) => a+b, 0) / utilSamples.length)
+    : null;
+
+  if (total) {
+    total.prod = fmtTime(TP);
+    total.coach = fmtTime(TC);
+    total.meet = fmtTime(TM);
+    total.well = fmtTime(TW);
+    total.brk = fmtTime(TB);
+    total.unavail = fmtTime(TU);
+    total.aux = fmtTime(totAux);
+    total.util = totUtil !== null ? fmtPct(totUtil) : '–';
+    total.jobs = String(TJ);
+    total.billing = fmtTime(totBilling);
+  }
+  // Balance = target - total (only if target row has numeric data)
+  if (balance && target) {
+    const tgtP = parseHM(target.prod), tgtC = parseHM(target.coach), tgtM = parseHM(target.meet),
+          tgtW = parseHM(target.well), tgtA = parseHM(target.aux), tgtBill = parseHM(target.billing);
+    const tgtJobs = parseJobs(target.jobs);
+    const tgtUtil = parseFloat(String(target.util || '').replace('%','')) / 100;
+    const has = v => v !== '–' && v !== '' && v !== null && v !== undefined;
+    balance.prod = has(target.prod) ? fmtTime(tgtP - TP) : '–';
+    balance.coach = has(target.coach) ? fmtTime(tgtC - TC) : '–';
+    balance.meet = has(target.meet) ? fmtTime(tgtM - TM) : '–';
+    balance.well = has(target.well) ? fmtTime(tgtW - TW) : '–';
+    balance.aux = has(target.aux) ? fmtTime(tgtA - totAux) : '–';
+    balance.billing = has(target.billing) ? fmtTime(tgtBill - totBilling) : '–';
+    balance.jobs = has(target.jobs) ? String(tgtJobs - TJ) : '–';
+    balance.util = (!isNaN(tgtUtil) && totUtil !== null && has(target.util)) ? fmtPct(tgtUtil - totUtil) : '–';
+  }
+}
+
 function saveDbEntryEdits(idx) {
   const card = document.querySelector(`.db-entry[data-idx="${idx}"]`);
   if (!card) return;
@@ -4631,6 +4724,7 @@ function saveDbEntryEdits(idx) {
       if (k && keys.includes(k)) r[k] = inp.value;
     });
   });
+  _recomputeEntryTotals(dbEntries[idx]);
   _sortDbEntriesDesc();
   lsSet('db_snapshots', dbEntries);
   _editingDbIdx = null;
@@ -4996,6 +5090,7 @@ function _meParseHM(v) {
 
 function _meRecalc() {
   let TP=0,TC=0,TM=0,TW=0,TB=0,TU=0,TJ=0;
+  const utilSamples = [];
   ME_DAYS.forEach(d => {
     const prod = _meParseHM(document.getElementById('me_prod_'+d).value);
     const coach = _meParseHM(document.getElementById('me_coach_'+d).value);
@@ -5003,7 +5098,7 @@ function _meRecalc() {
     const well = _meParseHM(document.getElementById('me_well_'+d).value);
     const brk = _meParseHM(document.getElementById('me_break_'+d).value);
     const unavail = _meParseHM(document.getElementById('me_unavail_'+d).value);
-    const jobs = parseInt(document.getElementById('me_jobs_'+d).value || '0') || 0;
+    const jobs = parseInt(document.getElementById('me_jobs_'+d).value, 10) || 0;
     const aux = coach + meet + well;
     const billing = prod + coach + meet + well;
     const util = billing > 0 ? prod / billing : null;
@@ -5014,11 +5109,15 @@ function _meRecalc() {
     const isHalf = chk.classList.contains('half-day-toggle');
     if (chk.checked || isHalf) {
       TP+=prod; TC+=coach; TM+=meet; TW+=well; TB+=brk; TU+=unavail; TJ+=jobs;
+      if (util !== null) utilSamples.push(util);
     }
   });
   const totBill = TP+TC+TM+TW;
   const totAux = TC+TM+TW;
-  const totUtil = totBill > 0 ? TP / totBill : null;
+  // Arithmetic mean (AVG) of daily utilizations
+  const totUtil = utilSamples.length
+    ? (utilSamples.reduce((a,b) => a+b, 0) / utilSamples.length)
+    : null;
   document.getElementById('me_tot_prod').textContent = fmtTime(TP);
   document.getElementById('me_tot_coach').textContent = fmtTime(TC);
   document.getElementById('me_tot_meet').textContent = fmtTime(TM);
@@ -5046,6 +5145,7 @@ function _meSave() {
     prod:'–', coach:'–', meet:'–', well:'–', brk:'–', unavail:'–', aux:'–', util:'–', jobs:'–', billing:'–' });
 
   let TP=0,TC=0,TM=0,TW=0,TB=0,TU=0,TJ=0;
+  const saveUtilSamples = [];
   ME_DAYS.forEach(d => {
     const chk = document.getElementById('me_chk_'+d);
     const isHalf = chk.classList.contains('half-day-toggle');
@@ -5056,12 +5156,13 @@ function _meSave() {
     const well = _meParseHM(document.getElementById('me_well_'+d).value);
     const brk = _meParseHM(document.getElementById('me_break_'+d).value);
     const unavail = _meParseHM(document.getElementById('me_unavail_'+d).value);
-    const jobs = parseInt(document.getElementById('me_jobs_'+d).value || '0') || 0;
+    const jobs = parseInt(document.getElementById('me_jobs_'+d).value, 10) || 0;
     const aux = coach + meet + well;
     const billing = prod + coach + meet + well;
     const util = billing > 0 ? prod / billing : null;
     if (chk.checked || isHalf) {
       TP+=prod; TC+=coach; TM+=meet; TW+=well; TB+=brk; TU+=unavail; TJ+=jobs;
+      if (util !== null) saveUtilSamples.push(util);
     }
     rows.push({
       label: ME_DAY_LABELS[d], type:'day',
@@ -5080,7 +5181,9 @@ function _meSave() {
 
   const totBill = TP+TC+TM+TW;
   const totAux = TC+TM+TW;
-  const totUtil = totBill > 0 ? TP / totBill : null;
+  const totUtil = saveUtilSamples.length
+    ? (saveUtilSamples.reduce((a,b) => a+b, 0) / saveUtilSamples.length)
+    : null;
   rows.push({
     label:'TOTAL USED', type:'total',
     prod: fmtTime(TP), coach: fmtTime(TC), meet: fmtTime(TM), well: fmtTime(TW),
