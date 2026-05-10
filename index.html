@@ -3593,6 +3593,7 @@ function initUserStorage(uid) {
   // Re-init attData and dbEntries from this user's scoped keys
   attData = lsGet('att_data', '{}');
   dbEntries = lsGet('db_snapshots', '[]');
+  if (typeof _backfillDbLeaveStatus === 'function') _backfillDbLeaveStatus();
   if (typeof _sortDbEntriesDesc === 'function') _sortDbEntriesDesc();
   // Load half-day flags for current week
   const hd = lsGet('half_days', '[]');
@@ -4571,6 +4572,42 @@ function _parseWeekDate(week) {
   return new Date(yr, mo, day).getTime();
 }
 
+function _backfillDbLeaveStatus() {
+  if (!Array.isArray(dbEntries) || !dbEntries.length) return;
+  const dayOffsets = { SUNDAY:-5, MONDAY:-4, TUESDAY:-3, WEDNESDAY:-2, THURSDAY:-1, FRIDAY:0, SATURDAY:-6 };
+  const validCodes = ['PL','UL','HL','SL'];
+  let changed = false;
+  dbEntries.forEach(entry => {
+    const friMs = _parseWeekDate(entry.week);
+    if (!friMs) return;
+    const friDate = new Date(friMs);
+    (entry.rows || []).forEach(r => {
+      if (r.type !== 'day') return;
+      // Migrate legacy "[XX]" suffix in label → status field
+      const tagMatch = /^(.*?)\s*\[(PL|UL|HL|SL)\]\s*$/i.exec(r.label || '');
+      if (tagMatch) {
+        r.label = tagMatch[1].trim();
+        if (!r.status) r.status = tagMatch[2].toUpperCase();
+        changed = true;
+      }
+      if (validCodes.includes((r.status || '').toUpperCase())) return;
+      // Look up by computed date in attData (calendar)
+      const upper = (r.label || '').toUpperCase();
+      const off = dayOffsets[upper];
+      if (off === undefined) return;
+      const t = new Date(friDate);
+      t.setDate(friDate.getDate() + off);
+      const dateKey = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+      const code = (attData && attData[dateKey] || '').toUpperCase();
+      if (validCodes.includes(code)) {
+        r.status = code;
+        changed = true;
+      }
+    });
+  });
+  if (changed) lsSet('db_snapshots', dbEntries);
+}
+
 function _sortDbEntriesDesc() {
   // Sort by parsed week date desc; fall back to id (push timestamp) for ties
   dbEntries.sort((a, b) => {
@@ -4601,6 +4638,7 @@ function saveDbEntryEdits(idx) {
 }
 
 function renderDbEntries() {
+  if (typeof _backfillDbLeaveStatus === 'function') _backfillDbLeaveStatus();
   const container = document.getElementById('dbEntriesList');
   if (!dbEntries.length) {
     container.innerHTML = '<div class="db-empty">No snapshots yet. Click "Push to Database" to capture the main table.</div>';
@@ -4643,16 +4681,15 @@ function renderDbEntries() {
         displayLabel = tagMatch[1].trim();
         if (!status) status = tagMatch[2].toUpperCase();
       }
-      const labelBg = (r.type === 'day' && STATUS_COLORS[status])
-        ? `background:${STATUS_COLORS[status]} !important;color:#1C2B3A !important;`
-        : '';
-      const labelTitle = status ? ` title="${status}"` : '';
+      const isLeaveRow = (r.type === 'day' && STATUS_COLORS[status]);
+      const cellBg = isLeaveRow ? `background:${STATUS_COLORS[status]} !important;color:#1C2B3A !important;` : '';
+      const rowTitle = status ? ` title="${status}"` : '';
       if (!editing) {
-        return `<tr class="${cls}">
-          <td style="text-align:left;font-weight:700;${labelBg}"${labelTitle}>${displayLabel}</td>
-          <td>${r.prod}</td><td>${r.coach}</td><td>${r.meet}</td><td>${r.well}</td>
-          <td>${r.brk}</td><td>${r.unavail}</td><td>${r.aux}</td>
-          <td>${r.util}</td><td>${r.jobs}</td><td>${r.billing}</td>
+        return `<tr class="${cls}"${rowTitle}>
+          <td style="text-align:left;font-weight:700;${cellBg}">${displayLabel}</td>
+          <td style="${cellBg}">${r.prod}</td><td style="${cellBg}">${r.coach}</td><td style="${cellBg}">${r.meet}</td><td style="${cellBg}">${r.well}</td>
+          <td style="${cellBg}">${r.brk}</td><td style="${cellBg}">${r.unavail}</td><td style="${cellBg}">${r.aux}</td>
+          <td style="${cellBg}">${r.util}</td><td style="${cellBg}">${r.jobs}</td><td style="${cellBg}">${r.billing}</td>
         </tr>`;
       }
       // For editing: keep raw label so user can manually adjust
