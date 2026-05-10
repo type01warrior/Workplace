@@ -4482,6 +4482,10 @@ function _doPushToDatabase(accuracy) {
   days.forEach(d => {
     const chk = document.getElementById('chk_' + d);
     if (!chk) return;
+    const dateKey = (typeof getDayDateKey === 'function') ? getDayDateKey(d) : null;
+    let status = (dateKey && attData && attData[dateKey]) ? attData[dateKey] : '';
+    if (typeof halfDays !== 'undefined' && halfDays.has(d) && !status) status = 'HL';
+    if (!['PL','UL','HL','SL'].includes(status)) status = '';
     rows.push({
       label: dayLabels[d],
       type: 'day',
@@ -4496,6 +4500,7 @@ function _doPushToDatabase(accuracy) {
       jobs: document.getElementById('jobs_' + d)?.value || '0',
       billing: document.getElementById('bill_' + d)?.textContent || '–',
       checked: chk.checked,
+      status,
     });
   });
   // Total used
@@ -4627,16 +4632,31 @@ function renderDbEntries() {
            <span class="db-del" onclick="deleteDbEntry(${idx})" title="Delete">✕</span>
          </span>`;
 
+    const STATUS_COLORS = { PL:'#FFE599', UL:'#EA9999', HL:'#9FC5E8', SL:'#F9CB9C' };
     const rowsHtml = entry.rows.map((r, rIdx) => {
       const cls = r.type === 'total' ? 'db-total' : r.type === 'balance' ? 'db-balance' : '';
+      // Strip "[XX]" suffix from label and detect leave status (legacy + manual entries)
+      let displayLabel = (r.label || '').toString();
+      let status = (r.status || '').toUpperCase();
+      const tagMatch = /^(.*?)\s*\[(PL|UL|HL|SL)\]\s*$/i.exec(displayLabel);
+      if (tagMatch) {
+        displayLabel = tagMatch[1].trim();
+        if (!status) status = tagMatch[2].toUpperCase();
+      }
+      const labelBg = (r.type === 'day' && STATUS_COLORS[status])
+        ? `background:${STATUS_COLORS[status]} !important;color:#1C2B3A !important;`
+        : '';
+      const labelTitle = status ? ` title="${status}"` : '';
       if (!editing) {
         return `<tr class="${cls}">
-          <td style="text-align:left;font-weight:700;">${r.label}</td>
+          <td style="text-align:left;font-weight:700;${labelBg}"${labelTitle}>${displayLabel}</td>
           <td>${r.prod}</td><td>${r.coach}</td><td>${r.meet}</td><td>${r.well}</td>
           <td>${r.brk}</td><td>${r.unavail}</td><td>${r.aux}</td>
           <td>${r.util}</td><td>${r.jobs}</td><td>${r.billing}</td>
         </tr>`;
       }
+      // For editing: keep raw label so user can manually adjust
+      r.label = displayLabel;
       const inp = (k, align) => {
         const v = (r[k] ?? '').toString().replace(/"/g,'&quot;');
         const ta = align || 'center';
@@ -5006,9 +5026,8 @@ function _meSave() {
     if (chk.checked || isHalf) {
       TP+=prod; TC+=coach; TM+=meet; TW+=well; TB+=brk; TU+=unavail; TJ+=jobs;
     }
-    const labelCell = ME_DAY_LABELS[d] + (status ? ` [${status}]` : '');
     rows.push({
-      label: labelCell, type:'day',
+      label: ME_DAY_LABELS[d], type:'day',
       prod: fmtTime(prod), coach: fmtTime(coach), meet: fmtTime(meet), well: fmtTime(well),
       brk: fmtTime(brk), unavail: fmtTime(unavail),
       aux: fmtTime(aux), util: util !== null ? fmtPct(util) : '–',
