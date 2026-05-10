@@ -747,17 +747,40 @@
     box-shadow: 0 1px 4px rgba(0,0,0,0.25);
   }
   input[type="checkbox"]:checked {
-    background: #1C2B3A !important;
-    border-color: #1C2B3A !important;
+    background: #1E90FF !important;
+    border-color: #1E90FF !important;
   }
   input[type="checkbox"]:checked::after { left: 17px; }
+  /* Half-day variant — purple toggle with ½ glyph inside */
+  input[type="checkbox"].half-day-toggle:checked {
+    background: #9b59b6 !important;
+    border-color: #9b59b6 !important;
+  }
+  input[type="checkbox"].half-day-toggle::before {
+    content: '½';
+    position: absolute;
+    left: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'Lexend', sans-serif;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 1;
+  }
   body.dark input[type="checkbox"] {
     background: #2a3a4a !important;
     border-color: #3a5068 !important;
   }
   body.dark input[type="checkbox"]:checked {
-    background: #6FA8DC !important;
-    border-color: #6FA8DC !important;
+    background: #1E90FF !important;
+    border-color: #1E90FF !important;
+  }
+  body.dark input[type="checkbox"].half-day-toggle:checked {
+    background: #9b59b6 !important;
+    border-color: #9b59b6 !important;
   }
   body.dark input[type="checkbox"]:checked::after { background: #fff; }
 
@@ -1422,6 +1445,80 @@ body.dark .db-modal-header h4 { color: #e8e8e8; }
 body.dark .db-hdr-btn-blue { color:#7ab; border-color:#7ab; background:rgba(122,171,188,0.1); }
 .db-hdr-btn:active { opacity:0.75; }
 
+/* ===== MANUAL ENTRY MODAL ===== */
+#manualEntryModal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65); z-index: 9500;
+  align-items: flex-start; justify-content: center;
+  font-family: 'Lexend', sans-serif;
+  overflow-y: auto;
+  padding: 30px 10px;
+}
+#manualEntryModal.open { display: flex; }
+.me-modal-card {
+  background: #fff; border: 1px solid #1C2B3A;
+  box-shadow: 4px 4px 0 #1C2B3A; border-radius: 10px;
+  padding: 16px 18px; width: 96vw; max-width: 1200px;
+  margin-bottom: 40px;
+}
+body.dark .me-modal-card { background: #1a1a1a; border-color: #333; box-shadow: 4px 4px 0 #000; }
+.me-modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding-bottom:10px; border-bottom:1.5px solid #e2e8f0; }
+body.dark .me-modal-header { border-bottom-color:#333; }
+.me-modal-header h4 { font-size:13px; font-weight:700; color:#1C2B3A; letter-spacing:0.5px; }
+body.dark .me-modal-header h4 { color:#e8e8e8; }
+.me-step-row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; }
+.me-field { display:flex; flex-direction:column; gap:4px; }
+.me-field label { font-size:9px; font-weight:700; color:#1C2B3A; letter-spacing:0.4px; text-transform:uppercase; }
+body.dark .me-field label { color:#bcd; }
+.me-field select, .me-field input {
+  font-family:'Lexend',sans-serif; font-size:11px; font-weight:600;
+  padding:6px 10px; min-width:140px; border:1.5px solid #ccd6e0; border-radius:6px;
+  background:#fff; color:#1C2B3A;
+}
+body.dark .me-field select, body.dark .me-field input { background:#222; color:#e8e8e8; border-color:#444; }
+.me-btn {
+  padding:7px 16px; font-family:'Lexend',sans-serif; font-size:10px; font-weight:700;
+  border-radius:6px; cursor:pointer; border:1.5px solid #1C2B3A;
+  background:#1C2B3A; color:#fff; letter-spacing:0.4px;
+}
+.me-btn-outline { background:transparent; color:#1C2B3A; }
+body.dark .me-btn { background:#1E90FF; border-color:#1E90FF; }
+body.dark .me-btn-outline { background:transparent; color:#7ab; border-color:#7ab; }
+.me-btn:active { opacity:0.8; }
+.me-err { color:#c0392b; font-size:10px; font-weight:700; margin-top:6px; min-height:14px; }
+.me-week-banner { background:#1E90FF; color:#fff; padding:8px 14px; border-radius:6px; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; }
+.me-table { width:100%; border-collapse:collapse; font-size:10px; }
+.me-table th { background:#1A202C; color:#E8F0F8; font-weight:700; padding:8px 6px; font-size:9px; letter-spacing:0.4px; text-align:center; border:1px solid #2a3a4a; }
+.me-table td { padding:6px 4px; text-align:center; border:1px solid #e2e8f0; background:#fff; }
+body.dark .me-table td { background:#1f1f1f; border-color:#333; color:#e8e8e8; }
+.me-table tr.me-day td { background:#fafbfc; }
+body.dark .me-table tr.me-day td { background:#1a1a1a; }
+.me-table tr.me-total td { background:#E3F0FB; font-weight:700; color:#1C2B3A; }
+body.dark .me-table tr.me-total td { background:#1d2a3a; color:#cfe6ff; }
+.me-table td.me-day-label { text-align:left; font-weight:700; padding-left:10px; min-width:90px; }
+.me-table input.me-dur, .me-table input.me-num {
+  width:64px; text-align:center; font-family:'Lexend',sans-serif; font-size:10px; font-weight:600;
+  padding:3px 4px; border:1px solid #ccd6e0; border-radius:4px; background:#fff; color:#1C2B3A;
+}
+.me-table input.me-num { width:54px; }
+body.dark .me-table input.me-dur, body.dark .me-table input.me-num { background:#0f1a26; color:#E8F0F8; border-color:#444; }
+.me-table .me-readonly { color:#1C2B3A; font-weight:700; }
+body.dark .me-table .me-readonly { color:#cfe6ff; }
+.me-status-pill {
+  display:inline-block; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:700;
+  border:1.5px solid #ccc; background:transparent; cursor:pointer; user-select:none; min-width:34px;
+}
+.me-status-pill[data-code="PL"] { color:#f0ad4e; border-color:#f0ad4e; }
+.me-status-pill[data-code="UL"] { color:#e74c3c; border-color:#e74c3c; }
+.me-status-pill[data-code="HL"] { color:#9b59b6; border-color:#9b59b6; }
+.me-status-pill[data-code="SL"] { color:#3498db; border-color:#3498db; }
+.me-status-pill.active[data-code="PL"] { background:#f0ad4e; color:#fff; }
+.me-status-pill.active[data-code="UL"] { background:#e74c3c; color:#fff; }
+.me-status-pill.active[data-code="HL"] { background:#9b59b6; color:#fff; }
+.me-status-pill.active[data-code="SL"] { background:#3498db; color:#fff; }
+.me-status-cell { display:flex; gap:3px; align-items:center; justify-content:center; flex-wrap:wrap; }
+.me-table input[type="checkbox"].me-toggle { width:34px !important; height:19px !important; }
+
 /* ===== ATTENDANCE MODAL ===== */
 #attendanceModal {
   display: none; position: fixed; inset: 0;
@@ -1894,12 +1991,24 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
       <h4>📊 DATABASE — PUSHED SNAPSHOTS</h4>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         <span class="db-push-msg" id="dbPushMsg"></span>
+        <button onclick="openManualEntryModal()" class="db-hdr-btn db-hdr-btn-blue" title="Add Historical Week">+ ADD WEEK</button>
         <button onclick="openDbExportPicker()" class="db-hdr-btn db-hdr-btn-blue">📥 EXPORT</button>
         <button onclick="clearAllDb()" class="db-hdr-btn db-hdr-btn-red">CLEAR ALL</button>
         <button onclick="showDbTab()" class="db-hdr-btn db-hdr-btn-red">✕ CLOSE</button>
       </div>
     </div>
     <div id="dbEntriesList"><div class="db-empty">No snapshots yet. Click "Push to Database" to capture the main table.</div></div>
+  </div>
+</div>
+
+<!-- ======== MANUAL ENTRY MODAL ======== -->
+<div id="manualEntryModal">
+  <div class="me-modal-card">
+    <div class="me-modal-header">
+      <h4 id="meTitle">➕ ADD HISTORICAL WEEK</h4>
+      <button onclick="closeManualEntryModal()" class="db-hdr-btn db-hdr-btn-red">✕ CLOSE</button>
+    </div>
+    <div id="meStepBody"></div>
   </div>
 </div>
 
@@ -2400,19 +2509,12 @@ let halfDays = new Set(); // day abbrs marked as half-day worked: 'sun','mon',..
 function setHalfDayBadge(day, active) {
   const chk = document.getElementById('chk_' + day);
   if (!chk) return;
-  let badge = document.getElementById('halfBadge_' + day);
-  if (active) {
-    if (!badge) {
-      badge = document.createElement('span');
-      badge.id = 'halfBadge_' + day;
-      badge.textContent = '½';
-      badge.title = 'Half Day';
-      badge.style.cssText = 'display:inline-block;margin-left:5px;padding:1px 5px;background:#9b59b6;color:#fff;border-radius:8px;font-size:9px;font-weight:700;font-family:Lexend,sans-serif;vertical-align:middle;';
-      chk.parentNode.appendChild(badge);
-    }
-  } else if (badge) {
-    badge.remove();
-  }
+  // Toggle the half-day visual on the checkbox itself (no layout shift)
+  chk.classList.toggle('half-day-toggle', !!active);
+  chk.title = active ? 'Half Day' : '';
+  // Remove any legacy external badge that may still exist in the DOM
+  const legacy = document.getElementById('halfBadge_' + day);
+  if (legacy) legacy.remove();
 }
 
 // ── Leave type popup when a working day is toggled OFF ──
@@ -3491,6 +3593,7 @@ function initUserStorage(uid) {
   // Re-init attData and dbEntries from this user's scoped keys
   attData = lsGet('att_data', '{}');
   dbEntries = lsGet('db_snapshots', '[]');
+  if (typeof _sortDbEntriesDesc === 'function') _sortDbEntriesDesc();
   // Load half-day flags for current week
   const hd = lsGet('half_days', '[]');
   halfDays = new Set(Array.isArray(hd) ? hd : []);
@@ -4425,7 +4528,8 @@ function _doPushToDatabase(accuracy) {
 
   const weekLabel = document.getElementById('weekLabelBar')?.textContent || '–';
   const entry = { id: Date.now(), week: weekLabel, pushedAt: new Date().toLocaleString(), accuracy, rows };
-  dbEntries.unshift(entry);
+  dbEntries.push(entry);
+  if (typeof _sortDbEntriesDesc === 'function') _sortDbEntriesDesc();
   lsSet('db_snapshots', dbEntries);
 
   // Show db tab
@@ -4449,6 +4553,28 @@ function cancelDbEntryEdit() {
   renderDbEntries();
 }
 
+function _parseWeekDate(week) {
+  // Parse formats like "WE-8th May'26" → timestamp of that Friday
+  const m = /WE-(\d+)(?:st|nd|rd|th)?\s+([A-Za-z]+)'?(\d{2,4})/.exec(week || '');
+  if (!m) return 0;
+  const months = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  const day = parseInt(m[1]);
+  const mo = months[m[2].toLowerCase().slice(0,3)];
+  if (mo === undefined) return 0;
+  let yr = parseInt(m[3]);
+  if (yr < 100) yr += 2000;
+  return new Date(yr, mo, day).getTime();
+}
+
+function _sortDbEntriesDesc() {
+  // Sort by parsed week date desc; fall back to id (push timestamp) for ties
+  dbEntries.sort((a, b) => {
+    const da = _parseWeekDate(a.week), db = _parseWeekDate(b.week);
+    if (db !== da) return db - da;
+    return (b.id || 0) - (a.id || 0);
+  });
+}
+
 function saveDbEntryEdits(idx) {
   const card = document.querySelector(`.db-entry[data-idx="${idx}"]`);
   if (!card) return;
@@ -4463,6 +4589,7 @@ function saveDbEntryEdits(idx) {
       if (k && keys.includes(k)) r[k] = inp.value;
     });
   });
+  _sortDbEntriesDesc();
   lsSet('db_snapshots', dbEntries);
   _editingDbIdx = null;
   renderDbEntries();
@@ -4556,6 +4683,371 @@ function clearAllDb() {
   dbEntries = [];
   lsSet('db_snapshots', []);
   renderDbEntries();
+}
+
+// ===== MANUAL ENTRY (Add Historical Week) =====
+const ME_DAYS = ['sun','mon','tue','wed','thu'];
+const ME_DAY_LABELS = { sun:'SUNDAY', mon:'MONDAY', tue:'TUESDAY', wed:'WEDNESDAY', thu:'THURSDAY' };
+const ME_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let _meSelectedFri = null; // Date object for Friday of selected week
+
+function openManualEntryModal() {
+  _meSelectedFri = null;
+  _meRenderStep1();
+  document.getElementById('manualEntryModal').classList.add('open');
+}
+
+function closeManualEntryModal() {
+  document.getElementById('manualEntryModal').classList.remove('open');
+  _meSelectedFri = null;
+}
+
+function _meDaySuffix(d) {
+  if (d >= 11 && d <= 13) return 'th';
+  switch (d % 10) { case 1: return 'st'; case 2: return 'nd'; case 3: return 'rd'; default: return 'th'; }
+}
+
+function _meBuildLabel(friDate) {
+  const d = friDate.getDate();
+  const yr = String(friDate.getFullYear()).slice(2);
+  return `WE-${d}${_meDaySuffix(d)} ${ME_MONTHS[friDate.getMonth()]}'${yr}`;
+}
+
+function _meFridaysInMonth(year, month) {
+  const result = [];
+  const last = new Date(year, month + 1, 0).getDate();
+  for (let day = 1; day <= last; day++) {
+    const dt = new Date(year, month, day);
+    if (dt.getDay() === 5) result.push(new Date(dt));
+  }
+  return result;
+}
+
+function _meRenderStep1() {
+  document.getElementById('meTitle').textContent = '➕ ADD HISTORICAL WEEK — Step 1: Select Week';
+  const now = new Date();
+  const curYear = now.getFullYear();
+  const years = [];
+  for (let y = curYear + 1; y >= curYear - 5; y--) years.push(y);
+  const yearOpts = years.map(y => `<option value="${y}" ${y === curYear ? 'selected' : ''}>${y}</option>`).join('');
+  const monthOpts = ME_MONTHS.map((m, i) => `<option value="${i}" ${i === now.getMonth() ? 'selected' : ''}>${m}</option>`).join('');
+  document.getElementById('meStepBody').innerHTML = `
+    <div style="font-size:10px;color:#666;margin-bottom:14px;line-height:1.6;">
+      Select the year, month, and the specific week (Saturday → Friday). The week name auto-fills as <strong>WE-[Friday] [Month]'[Year]</strong>.
+    </div>
+    <div class="me-step-row">
+      <div class="me-field">
+        <label>Year</label>
+        <select id="meYear" onchange="_meRefreshWeeks()">${yearOpts}</select>
+      </div>
+      <div class="me-field">
+        <label>Month</label>
+        <select id="meMonth" onchange="_meRefreshWeeks()">${monthOpts}</select>
+      </div>
+      <div class="me-field" style="flex:1;min-width:220px;">
+        <label>Week (Sat → Fri)</label>
+        <select id="meWeek"></select>
+      </div>
+      <button class="me-btn" onclick="_meContinue()">CONTINUE →</button>
+    </div>
+    <div class="me-err" id="meStep1Err"></div>
+  `;
+  _meRefreshWeeks();
+}
+
+function _meRefreshWeeks() {
+  const yr = parseInt(document.getElementById('meYear').value);
+  const mo = parseInt(document.getElementById('meMonth').value);
+  const fridays = _meFridaysInMonth(yr, mo);
+  const existing = new Set(dbEntries.map(e => e.week));
+  const opts = fridays.map((f, i) => {
+    const label = _meBuildLabel(f);
+    const dup = existing.has(label) ? ' (already exists)' : '';
+    return `<option value="${i}" data-fri="${f.toISOString()}"${existing.has(label) ? ' disabled' : ''}>${label}${dup}</option>`;
+  }).join('');
+  document.getElementById('meWeek').innerHTML = opts || '<option value="">— No Fridays —</option>';
+  document.getElementById('meStep1Err').textContent = '';
+}
+
+function _meContinue() {
+  const sel = document.getElementById('meWeek');
+  const opt = sel.options[sel.selectedIndex];
+  const errEl = document.getElementById('meStep1Err');
+  if (!opt || !opt.dataset.fri || opt.disabled) {
+    errEl.textContent = 'Please select a valid week (not already in database).';
+    return;
+  }
+  const fri = new Date(opt.dataset.fri);
+  const label = _meBuildLabel(fri);
+  if (dbEntries.some(e => e.week === label)) {
+    errEl.textContent = `Week "${label}" already exists in the database.`;
+    return;
+  }
+  _meSelectedFri = fri;
+  _meRenderStep2();
+}
+
+function _meRenderStep2() {
+  const label = _meBuildLabel(_meSelectedFri);
+  document.getElementById('meTitle').textContent = '➕ ADD HISTORICAL WEEK — Step 2: Enter Data';
+  const statusCodes = ['PL','UL','HL','SL'];
+  const dayRows = ME_DAYS.map(d => {
+    const pills = statusCodes.map(c =>
+      `<span class="me-status-pill" data-code="${c}" id="me_pill_${d}_${c}" onclick="_mePickStatus('${d}','${c}')">${c}</span>`
+    ).join('');
+    return `<tr class="me-day" id="me_row_${d}">
+      <td class="me-day-label">${ME_DAY_LABELS[d]}</td>
+      <td><div class="me-status-cell">
+        <input type="checkbox" class="me-toggle" id="me_chk_${d}" checked onchange="_meToggleDay('${d}')">
+        <span id="me_status_wrap_${d}" style="display:none;">${pills}</span>
+      </div></td>
+      <td><input type="text" class="me-dur" id="me_prod_${d}" value="00:00" placeholder="HH:MM" maxlength="5" oninput="fmtDurInput(this);_meRecalc()"></td>
+      <td><input type="text" class="me-dur" id="me_coach_${d}" value="00:00" placeholder="HH:MM" maxlength="5" oninput="fmtDurInput(this);_meRecalc()"></td>
+      <td><input type="text" class="me-dur" id="me_meet_${d}" value="00:00" placeholder="HH:MM" maxlength="5" oninput="fmtDurInput(this);_meRecalc()"></td>
+      <td><input type="text" class="me-dur" id="me_well_${d}" value="00:00" placeholder="HH:MM" maxlength="5" oninput="fmtDurInput(this);_meRecalc()"></td>
+      <td><input type="text" class="me-dur" id="me_break_${d}" value="00:00" placeholder="HH:MM" maxlength="5" oninput="fmtDurInput(this);_meRecalc()"></td>
+      <td><input type="text" class="me-dur" id="me_unavail_${d}" value="00:00" placeholder="HH:MM" maxlength="5" oninput="fmtDurInput(this);_meRecalc()"></td>
+      <td class="me-readonly" id="me_aux_${d}">0:00</td>
+      <td class="me-readonly" id="me_util_${d}">–</td>
+      <td><input type="number" class="me-num" id="me_jobs_${d}" value="0" min="0" oninput="_meRecalc()"></td>
+      <td class="me-readonly" id="me_bill_${d}">0:00</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('meStepBody').innerHTML = `
+    <div class="me-week-banner">
+      <span>📅 ${label} &nbsp; · &nbsp; Sat ${_meSatStr()} → Fri ${_meFriStr()}</span>
+      <button class="me-btn me-btn-outline" style="background:#fff;color:#1E90FF;border-color:#fff;padding:4px 10px;" onclick="_meRenderStep1()">← Change Week</button>
+    </div>
+    <div style="overflow-x:auto;">
+    <table class="me-table">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding-left:10px;">DAY</th>
+          <th>STATUS</th>
+          <th>PRODUCTION</th>
+          <th>COACHING</th>
+          <th>MEETING</th>
+          <th>WELLBEING</th>
+          <th>BREAK/LUNCH</th>
+          <th>UNAVAILABLE</th>
+          <th>TOTAL AUX</th>
+          <th>UTILIZATION</th>
+          <th>JOB COUNT</th>
+          <th>BILLING HOURS</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${dayRows}
+        <tr class="me-total" id="me_total_row">
+          <td class="me-day-label">TOTAL USED</td>
+          <td>—</td>
+          <td id="me_tot_prod">0:00</td>
+          <td id="me_tot_coach">0:00</td>
+          <td id="me_tot_meet">0:00</td>
+          <td id="me_tot_well">0:00</td>
+          <td id="me_tot_break">0:00</td>
+          <td id="me_tot_unavail">0:00</td>
+          <td id="me_tot_aux">0:00</td>
+          <td id="me_tot_util">–</td>
+          <td id="me_tot_jobs">0</td>
+          <td id="me_tot_bill">0:00</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+      <button class="me-btn me-btn-outline" onclick="_meRenderStep1()">← BACK</button>
+      <button class="me-btn" onclick="_meSave()">💾 SAVE WEEK</button>
+    </div>
+    <div class="me-err" id="meStep2Err"></div>
+  `;
+  _meRecalc();
+}
+
+function _meSatStr() {
+  const sat = new Date(_meSelectedFri); sat.setDate(_meSelectedFri.getDate() - 6);
+  return `${sat.getDate()} ${ME_MONTHS[sat.getMonth()]}'${String(sat.getFullYear()).slice(2)}`;
+}
+function _meFriStr() {
+  return `${_meSelectedFri.getDate()} ${ME_MONTHS[_meSelectedFri.getMonth()]}'${String(_meSelectedFri.getFullYear()).slice(2)}`;
+}
+
+function _meDateForDay(d) {
+  // d='sun'/'mon'/'tue'/'wed'/'thu'. Sat=fri-6, Sun=fri-5, Mon=fri-4, Tue=fri-3, Wed=fri-2, Thu=fri-1
+  const offsets = { sun:-5, mon:-4, tue:-3, wed:-2, thu:-1 };
+  const t = new Date(_meSelectedFri);
+  t.setDate(_meSelectedFri.getDate() + offsets[d]);
+  return t;
+}
+function _meDateKey(d) {
+  const t = _meDateForDay(d);
+  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+}
+
+function _meToggleDay(d) {
+  const chk = document.getElementById('me_chk_' + d);
+  const wrap = document.getElementById('me_status_wrap_' + d);
+  const wasHalf = chk.classList.contains('half-day-toggle');
+  if (chk.checked || wasHalf) {
+    // Day ON (or exiting HL) → hide status pills, clear status, force checked
+    chk.checked = true;
+    wrap.style.display = 'none';
+    chk.classList.remove('half-day-toggle');
+    chk.dataset.status = '';
+    ['PL','UL','HL','SL'].forEach(c => document.getElementById(`me_pill_${d}_${c}`)?.classList.remove('active'));
+    document.querySelectorAll(`#me_row_${d} input.me-dur, #me_row_${d} input.me-num`).forEach(i => i.disabled = false);
+  } else {
+    // Day OFF → show status pills (default to PL if none)
+    wrap.style.display = 'inline-flex';
+    if (!chk.dataset.status) _mePickStatus(d, 'PL');
+  }
+  _meRecalc();
+}
+
+function _mePickStatus(d, code) {
+  const chk = document.getElementById('me_chk_' + d);
+  ['PL','UL','HL','SL'].forEach(c => {
+    document.getElementById(`me_pill_${d}_${c}`)?.classList.toggle('active', c === code);
+  });
+  chk.dataset.status = code;
+  if (code === 'HL') {
+    // Half day: keep checkbox checked but in half-day visual state; allow input editing for half day
+    chk.checked = true;
+    chk.classList.add('half-day-toggle');
+    document.getElementById('me_status_wrap_' + d).style.display = 'inline-flex';
+    document.querySelectorAll(`#me_row_${d} input.me-dur, #me_row_${d} input.me-num`).forEach(i => i.disabled = false);
+  } else {
+    // Full leave: keep checkbox unchecked, disable inputs
+    chk.checked = false;
+    chk.classList.remove('half-day-toggle');
+    document.querySelectorAll(`#me_row_${d} input.me-dur, #me_row_${d} input.me-num`).forEach(i => {
+      i.disabled = true;
+      if (i.classList.contains('me-dur')) i.value = '00:00';
+      else i.value = '0';
+    });
+  }
+  _meRecalc();
+}
+
+function _meParseHM(v) {
+  if (!v) return 0;
+  const m = /^(\d+):(\d+)$/.exec(v.trim());
+  if (!m) return 0;
+  return parseInt(m[1]) * 60 + parseInt(m[2]);
+}
+
+function _meRecalc() {
+  let TP=0,TC=0,TM=0,TW=0,TB=0,TU=0,TJ=0;
+  ME_DAYS.forEach(d => {
+    const prod = _meParseHM(document.getElementById('me_prod_'+d).value);
+    const coach = _meParseHM(document.getElementById('me_coach_'+d).value);
+    const meet = _meParseHM(document.getElementById('me_meet_'+d).value);
+    const well = _meParseHM(document.getElementById('me_well_'+d).value);
+    const brk = _meParseHM(document.getElementById('me_break_'+d).value);
+    const unavail = _meParseHM(document.getElementById('me_unavail_'+d).value);
+    const jobs = parseInt(document.getElementById('me_jobs_'+d).value || '0') || 0;
+    const aux = coach + meet + well;
+    const billing = prod + coach + meet + well;
+    const util = billing > 0 ? prod / billing : null;
+    document.getElementById('me_aux_'+d).textContent = fmtTime(aux);
+    document.getElementById('me_util_'+d).textContent = util !== null ? fmtPct(util) : '–';
+    document.getElementById('me_bill_'+d).textContent = fmtTime(billing);
+    const chk = document.getElementById('me_chk_'+d);
+    const isHalf = chk.classList.contains('half-day-toggle');
+    if (chk.checked || isHalf) {
+      TP+=prod; TC+=coach; TM+=meet; TW+=well; TB+=brk; TU+=unavail; TJ+=jobs;
+    }
+  });
+  const totBill = TP+TC+TM+TW;
+  const totAux = TC+TM+TW;
+  const totUtil = totBill > 0 ? TP / totBill : null;
+  document.getElementById('me_tot_prod').textContent = fmtTime(TP);
+  document.getElementById('me_tot_coach').textContent = fmtTime(TC);
+  document.getElementById('me_tot_meet').textContent = fmtTime(TM);
+  document.getElementById('me_tot_well').textContent = fmtTime(TW);
+  document.getElementById('me_tot_break').textContent = fmtTime(TB);
+  document.getElementById('me_tot_unavail').textContent = fmtTime(TU);
+  document.getElementById('me_tot_aux').textContent = fmtTime(totAux);
+  document.getElementById('me_tot_util').textContent = totUtil !== null ? fmtPct(totUtil) : '–';
+  document.getElementById('me_tot_jobs').textContent = String(TJ);
+  document.getElementById('me_tot_bill').textContent = fmtTime(totBill);
+}
+
+function _meSave() {
+  const errEl = document.getElementById('meStep2Err');
+  if (!_meSelectedFri) { errEl.textContent = 'No week selected.'; return; }
+  const label = _meBuildLabel(_meSelectedFri);
+  if (dbEntries.some(e => e.week === label)) {
+    errEl.textContent = `Week "${label}" already exists.`;
+    return;
+  }
+
+  const rows = [];
+  // Header (no targets in manual mode)
+  rows.push({ label:'DAY/BILLING', type:'target',
+    prod:'–', coach:'–', meet:'–', well:'–', brk:'–', unavail:'–', aux:'–', util:'–', jobs:'–', billing:'–' });
+
+  let TP=0,TC=0,TM=0,TW=0,TB=0,TU=0,TJ=0;
+  ME_DAYS.forEach(d => {
+    const chk = document.getElementById('me_chk_'+d);
+    const isHalf = chk.classList.contains('half-day-toggle');
+    const status = chk.dataset.status || '';
+    const prod = _meParseHM(document.getElementById('me_prod_'+d).value);
+    const coach = _meParseHM(document.getElementById('me_coach_'+d).value);
+    const meet = _meParseHM(document.getElementById('me_meet_'+d).value);
+    const well = _meParseHM(document.getElementById('me_well_'+d).value);
+    const brk = _meParseHM(document.getElementById('me_break_'+d).value);
+    const unavail = _meParseHM(document.getElementById('me_unavail_'+d).value);
+    const jobs = parseInt(document.getElementById('me_jobs_'+d).value || '0') || 0;
+    const aux = coach + meet + well;
+    const billing = prod + coach + meet + well;
+    const util = billing > 0 ? prod / billing : null;
+    if (chk.checked || isHalf) {
+      TP+=prod; TC+=coach; TM+=meet; TW+=well; TB+=brk; TU+=unavail; TJ+=jobs;
+    }
+    const labelCell = ME_DAY_LABELS[d] + (status ? ` [${status}]` : '');
+    rows.push({
+      label: labelCell, type:'day',
+      prod: fmtTime(prod), coach: fmtTime(coach), meet: fmtTime(meet), well: fmtTime(well),
+      brk: fmtTime(brk), unavail: fmtTime(unavail),
+      aux: fmtTime(aux), util: util !== null ? fmtPct(util) : '–',
+      jobs: String(jobs), billing: fmtTime(billing),
+      checked: chk.checked, status,
+    });
+    // Push leave to attendance calendar
+    if (status) {
+      const dateKey = _meDateKey(d);
+      attData[dateKey] = status;
+    }
+  });
+
+  const totBill = TP+TC+TM+TW;
+  const totAux = TC+TM+TW;
+  const totUtil = totBill > 0 ? TP / totBill : null;
+  rows.push({
+    label:'TOTAL USED', type:'total',
+    prod: fmtTime(TP), coach: fmtTime(TC), meet: fmtTime(TM), well: fmtTime(TW),
+    brk: fmtTime(TB), unavail: fmtTime(TU), aux: fmtTime(totAux),
+    util: totUtil !== null ? fmtPct(totUtil) : '–',
+    jobs: String(TJ), billing: fmtTime(totBill),
+  });
+  rows.push({ label:'TOTAL BALANCE', type:'balance',
+    prod:'–', coach:'–', meet:'–', well:'–', brk:'–', unavail:'–', aux:'–', util:'–', jobs:'–', billing:'–' });
+
+  const entry = { id: Date.now(), week: label, pushedAt: new Date().toLocaleString(), accuracy: null, rows, manual: true };
+  dbEntries.push(entry);
+  _sortDbEntriesDesc();
+  lsSet('db_snapshots', dbEntries);
+  lsSet('att_data', attData);
+  if (document.getElementById('attendanceModal')?.classList.contains('open')) {
+    if (typeof renderAttCalendar === 'function') renderAttCalendar();
+  }
+  if (window.saveUserData) window.saveUserData();
+  closeManualEntryModal();
+  renderDbEntries();
+  const msg = document.getElementById('dbPushMsg');
+  if (msg) { msg.textContent = `✓ Added ${label}`; setTimeout(() => msg.textContent = '', 2500); }
 }
 
 // ===== SYNC (SAVE to cloud) =====
