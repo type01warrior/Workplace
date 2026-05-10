@@ -2394,21 +2394,113 @@ function autoCalcDaysLeft() {
 }
 
 
+// ── Half-day tracking (day toggled OFF = half day worked) ──
+let halfDays = new Set(); // day abbrs marked as half-day worked: 'sun','mon',...
+
+function setHalfDayBadge(day, active) {
+  const chk = document.getElementById('chk_' + day);
+  if (!chk) return;
+  let badge = document.getElementById('halfBadge_' + day);
+  if (active) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.id = 'halfBadge_' + day;
+      badge.textContent = '½';
+      badge.title = 'Half Day';
+      badge.style.cssText = 'display:inline-block;margin-left:5px;padding:1px 5px;background:#9b59b6;color:#fff;border-radius:8px;font-size:9px;font-weight:700;font-family:Lexend,sans-serif;vertical-align:middle;';
+      chk.parentNode.appendChild(badge);
+    }
+  } else if (badge) {
+    badge.remove();
+  }
+}
+
 // ── Leave type popup when a working day is toggled OFF ──
 function onDayToggle(chkEl, day) {
   if (chkEl.checked) {
-    // Turned back ON — clear leave for today's date from attendance
+    // Turned back ON — clear half-day flag and any leave for today's date
+    if (halfDays.has(day)) {
+      halfDays.delete(day);
+      setHalfDayBadge(day, false);
+      lsSet('half_days', [...halfDays]);
+    }
     const dateKey = getDayDateKey(day);
     if (dateKey && attData[dateKey]) {
       delete attData[dateKey];
       lsSet('att_data', attData);
-      if (typeof window._getLocalData === 'function') {} // local binding updated
     }
     recalc();
     return;
   }
-  // Turned OFF — show leave picker
-  _showLeavePickerForDay(day, chkEl);
+  // Turned OFF — first ask Half Day or Full Day
+  _showHalfFullPrompt(day, chkEl);
+}
+
+function _showHalfFullPrompt(day, chkEl) {
+  document.getElementById('halfFullPopup')?.remove();
+  const isDark = document.body.classList.contains('dark');
+  const bg = isDark ? '#1a1a1a' : '#fff';
+  const border = isDark ? '#333' : '#1C2B3A';
+  const txt = isDark ? '#e8e8e8' : '#1C2B3A';
+  const dayLabel = day.toUpperCase();
+  const popup = document.createElement('div');
+  popup.id = 'halfFullPopup';
+  popup.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:${bg};border:2px solid ${border};border-radius:12px;padding:20px 24px;z-index:99999;min-width:280px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.35);font-family:Lexend,sans-serif;`;
+  popup.innerHTML = `
+    <div style="font-size:11px;font-weight:700;color:${txt};margin-bottom:4px;">${dayLabel} — Off Type</div>
+    <div style="font-size:9px;color:#888;margin-bottom:16px;">Is this a half day or a full day off?</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button onclick="_applyHalfDay('${day}')"
+        style="flex:1;padding:12px 6px;font-family:Lexend,sans-serif;font-size:11px;font-weight:700;background:#9b59b622;color:#9b59b6;border:2px solid #9b59b6;border-radius:8px;cursor:pointer;line-height:1.3;">
+        ½ HALF DAY<br><span style="font-size:8px;font-weight:400;opacity:0.85;">Counts as 0.5 day · targets halved</span>
+      </button>
+      <button onclick="_chooseFullDay('${day}')"
+        style="flex:1;padding:12px 6px;font-family:Lexend,sans-serif;font-size:11px;font-weight:700;background:#e74c3c22;color:#e74c3c;border:2px solid #e74c3c;border-radius:8px;cursor:pointer;line-height:1.3;">
+        FULL DAY<br><span style="font-size:8px;font-weight:400;opacity:0.85;">Pick PL / UL / HL / SL</span>
+      </button>
+    </div>
+    <button onclick="_cancelHalfFull('${day}')"
+      style="width:100%;padding:8px;font-family:Lexend,sans-serif;font-size:10px;font-weight:700;background:transparent;border:1.5px solid #ccd6e0;border-radius:8px;cursor:pointer;color:#888;">
+      Cancel (keep day ON)
+    </button>`;
+  document.body.appendChild(popup);
+}
+
+function _applyHalfDay(day) {
+  const chk = document.getElementById('chk_' + day);
+  if (chk) chk.checked = true; // half day = still working, just counts as 0.5
+  halfDays.add(day);
+  lsSet('half_days', [...halfDays]);
+  setHalfDayBadge(day, true);
+  const dateKey = getDayDateKey(day);
+  if (dateKey) {
+    attData[dateKey] = 'HL';
+    lsSet('att_data', attData);
+    if (document.getElementById('attendanceModal')?.classList.contains('open')) {
+      if (typeof renderAttCalendar === 'function') renderAttCalendar();
+    }
+  }
+  document.getElementById('halfFullPopup')?.remove();
+  recalc();
+  if (window.saveUserData) window.saveUserData();
+}
+
+function _chooseFullDay(day) {
+  document.getElementById('halfFullPopup')?.remove();
+  if (halfDays.has(day)) {
+    halfDays.delete(day);
+    setHalfDayBadge(day, false);
+    lsSet('half_days', [...halfDays]);
+  }
+  const chk = document.getElementById('chk_' + day);
+  _showLeavePickerForDay(day, chk);
+}
+
+function _cancelHalfFull(day) {
+  const chk = document.getElementById('chk_' + day);
+  if (chk) chk.checked = true;
+  document.getElementById('halfFullPopup')?.remove();
+  recalc();
 }
 
 function getDayDateKey(day) {
@@ -2520,11 +2612,13 @@ function recalc() {
   // Week labels
   ['p2_week','p2_bweek'].forEach(id => setText(id, weekLabel));
 
-  // Working days (count checked boxes)
+  // Working days (count checked boxes; half-days count as 0.5)
   const activeDays = DAYS.filter(d => document.getElementById('chk_' + d)?.checked);
-  const numDays = activeDays.length;
-  document.getElementById('workingDays').textContent = numDays;
-  document.getElementById('tot_days').textContent = numDays;
+  const halfCount = activeDays.filter(d => halfDays.has(d)).length;
+  const numDays = activeDays.length - halfCount * 0.5;
+  const numDaysDisplay = Number.isInteger(numDays) ? numDays : numDays.toFixed(1);
+  document.getElementById('workingDays').textContent = numDaysDisplay;
+  document.getElementById('tot_days').textContent = numDaysDisplay;
 
   // Per-day calculations
   let totProd = 0, totCoach = 0, totMeet = 0, totWell = 0, totBreak = 0, totUnavail = 0, totJobs = 0;
@@ -3397,6 +3491,17 @@ function initUserStorage(uid) {
   // Re-init attData and dbEntries from this user's scoped keys
   attData = lsGet('att_data', '{}');
   dbEntries = lsGet('db_snapshots', '[]');
+  // Load half-day flags for current week
+  const hd = lsGet('half_days', '[]');
+  halfDays = new Set(Array.isArray(hd) ? hd : []);
+  // Sync half-day badges and ensure checkboxes are checked for half-days
+  ['sun','mon','tue','wed','thu','fri','sat'].forEach(d => {
+    setHalfDayBadge(d, halfDays.has(d));
+    if (halfDays.has(d)) {
+      const chk = document.getElementById('chk_' + d);
+      if (chk) chk.checked = true;
+    }
+  });
   // Load weekoff settings
   const wo = lsGet('weekoff_settings', 'null');
   if (wo) {
@@ -4332,13 +4437,46 @@ function _doPushToDatabase(accuracy) {
   setTimeout(() => msg.textContent = '', 2500);
 }
 
+let _editingDbIdx = null;
+
+function toggleEditDbEntry(idx) {
+  _editingDbIdx = (_editingDbIdx === idx) ? null : idx;
+  renderDbEntries();
+}
+
+function cancelDbEntryEdit() {
+  _editingDbIdx = null;
+  renderDbEntries();
+}
+
+function saveDbEntryEdits(idx) {
+  const card = document.querySelector(`.db-entry[data-idx="${idx}"]`);
+  if (!card) return;
+  const weekInput = card.querySelector('.db-week-input');
+  if (weekInput && weekInput.value.trim()) dbEntries[idx].week = weekInput.value.trim();
+  const keys = ['label','prod','coach','meet','well','brk','unavail','aux','util','jobs','billing'];
+  card.querySelectorAll('tr.db-edit-row').forEach((tr) => {
+    const rIdx = parseInt(tr.getAttribute('data-row-idx'));
+    const r = dbEntries[idx].rows[rIdx];
+    tr.querySelectorAll('input.db-cell-input').forEach((inp) => {
+      const k = inp.getAttribute('data-key');
+      if (k && keys.includes(k)) r[k] = inp.value;
+    });
+  });
+  lsSet('db_snapshots', dbEntries);
+  _editingDbIdx = null;
+  renderDbEntries();
+}
+
 function renderDbEntries() {
   const container = document.getElementById('dbEntriesList');
   if (!dbEntries.length) {
     container.innerHTML = '<div class="db-empty">No snapshots yet. Click "Push to Database" to capture the main table.</div>';
     return;
   }
+  const keys = ['label','prod','coach','meet','well','brk','unavail','aux','util','jobs','billing'];
   container.innerHTML = dbEntries.map((entry, idx) => {
+    const editing = (_editingDbIdx === idx);
     const acc = entry.accuracy;
     let accHtml = '';
     if (acc && acc.accPct !== '–') {
@@ -4347,11 +4485,50 @@ function renderDbEntries() {
     } else {
       accHtml = `&nbsp;|&nbsp; <span onclick="openAccuracyModal(${idx})" style="cursor:pointer;color:#f6b26b;font-weight:700;font-size:11px;padding:2px 8px;border:1px dashed #f6b26b;border-radius:4px;">+ ADD ACCURACY</span>`;
     }
+
+    const weekHtml = editing
+      ? `📅 <input class="db-week-input" type="text" value="${(entry.week||'').replace(/"/g,'&quot;')}" style="background:#0f1a26;color:#E8F0F8;border:1px solid #7ab;border-radius:4px;padding:2px 6px;font-family:'Lexend',sans-serif;font-size:11px;font-weight:700;width:160px;">`
+      : `📅 ${entry.week}`;
+
+    const actionsHtml = editing
+      ? `<span style="display:flex;gap:8px;align-items:center;">
+           <span class="db-del" onclick="saveDbEntryEdits(${idx})" title="Save" style="color:#93C47D;font-size:13px;">✓</span>
+           <span class="db-del" onclick="cancelDbEntryEdit()" title="Cancel">✕</span>
+         </span>`
+      : `<span style="display:flex;gap:10px;align-items:center;">
+           <span class="db-del" onclick="toggleEditDbEntry(${idx})" title="Edit" style="font-size:12px;">✏️</span>
+           <span class="db-del" onclick="deleteDbEntry(${idx})" title="Delete">✕</span>
+         </span>`;
+
+    const rowsHtml = entry.rows.map((r, rIdx) => {
+      const cls = r.type === 'total' ? 'db-total' : r.type === 'balance' ? 'db-balance' : '';
+      if (!editing) {
+        return `<tr class="${cls}">
+          <td style="text-align:left;font-weight:700;">${r.label}</td>
+          <td>${r.prod}</td><td>${r.coach}</td><td>${r.meet}</td><td>${r.well}</td>
+          <td>${r.brk}</td><td>${r.unavail}</td><td>${r.aux}</td>
+          <td>${r.util}</td><td>${r.jobs}</td><td>${r.billing}</td>
+        </tr>`;
+      }
+      const inp = (k, align) => {
+        const v = (r[k] ?? '').toString().replace(/"/g,'&quot;');
+        const ta = align || 'center';
+        const w = (k === 'label') ? '100%' : '64px';
+        return `<input class="db-cell-input" data-key="${k}" type="text" value="${v}" style="width:${w};text-align:${ta};background:transparent;color:inherit;border:1px solid #7ab;border-radius:3px;padding:2px 4px;font-family:'Lexend',sans-serif;font-size:10px;font-weight:${k==='label'?'700':'400'};">`;
+      };
+      return `<tr class="${cls} db-edit-row" data-row-idx="${rIdx}">
+        <td style="text-align:left;">${inp('label','left')}</td>
+        <td>${inp('prod')}</td><td>${inp('coach')}</td><td>${inp('meet')}</td><td>${inp('well')}</td>
+        <td>${inp('brk')}</td><td>${inp('unavail')}</td><td>${inp('aux')}</td>
+        <td>${inp('util')}</td><td>${inp('jobs')}</td><td>${inp('billing')}</td>
+      </tr>`;
+    }).join('');
+
     return `
-    <div class="db-entry">
+    <div class="db-entry" data-idx="${idx}">
       <div class="db-entry-header">
-        <span>📅 ${entry.week} &nbsp;|&nbsp; Pushed: ${entry.pushedAt}${accHtml}</span>
-        <span class="db-del" onclick="deleteDbEntry(${idx})" title="Delete">✕</span>
+        <span>${weekHtml} &nbsp;|&nbsp; Pushed: ${entry.pushedAt}${editing ? '' : accHtml}</span>
+        ${actionsHtml}
       </div>
       <div style="overflow-x:auto;">
         <table class="db-table">
@@ -4361,13 +4538,7 @@ function renderDbEntries() {
             <th>BREAK/LUNCH</th><th>UNAVAILABLE</th><th>TOTAL AUX</th>
             <th>UTILIZATION</th><th>JOB COUNT</th><th>BILLING</th>
           </tr>
-          ${entry.rows.map(r => `
-            <tr class="${r.type === 'total' ? 'db-total' : r.type === 'balance' ? 'db-balance' : ''}">
-              <td style="text-align:left;font-weight:700;">${r.label}</td>
-              <td>${r.prod}</td><td>${r.coach}</td><td>${r.meet}</td><td>${r.well}</td>
-              <td>${r.brk}</td><td>${r.unavail}</td><td>${r.aux}</td>
-              <td>${r.util}</td><td>${r.jobs}</td><td>${r.billing}</td>
-            </tr>`).join('')}
+          ${rowsHtml}
         </table>
       </div>
     </div>`;
