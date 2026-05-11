@@ -1936,6 +1936,7 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     <!-- Desktop buttons -->
     <button onclick="syncData()" id="syncBtnD" class="tb-btn2 tb-desktop-show">☁ SYNC</button>
     <button onclick="refreshFromCloud()" id="refreshBtnD" class="tb-btn2 tb-desktop-show">⟳ REFRESH</button>
+    <button onclick="manualCloseShift()" id="closeShiftBtn" class="tb-btn2 tb-desktop-show" title="Finalize current shift and roll dashboard to next working day">⏻ CLOSE SHIFT</button>
     <div class="tb-desktop-show" style="margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0;">
       <span id="logoutTimeBadge2" class="tb-logout-badge" style="font-size:11px;">🕐 –</span>
       <span class="tb-time" id="timeNow"></span>
@@ -2375,10 +2376,29 @@ function getWeekLabel() {
   return `WE-${d}${suffix} ${months[fri.getMonth()]}'${yr}`;
 }
 
-// Today's day name
+// Today's day name — shift-aware.
+// For shifts that cross midnight (Evening, Night), a working day = the calendar
+// day the shift STARTED on. So for an Evening worker, 00:00–01:30 AM is attributed
+// to the PREVIOUS calendar day. `_shiftExtending` lets a user keep logging to the
+// previous day even past the scheduled end (see Shift Extension popup).
 function getTodayDayName() {
   const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
-  return days[new Date().getDay()];
+  const now = new Date();
+  let dayIdx = now.getDay();
+  try {
+    const shift = (typeof _userShift !== 'undefined' ? _userShift : 'morning');
+    const t = (typeof SHIFT_TIMINGS !== 'undefined') ? SHIFT_TIMINGS[shift] : null;
+    if (t && t.endCrossesMidnight) {
+      const mins = now.getHours() * 60 + now.getMinutes();
+      const extending = (typeof _shiftExtending === 'function') && _shiftExtending();
+      // If current time is between 0 and shift-end (inclusive of extend grace),
+      // the working day is yesterday. `extending` keeps it yesterday past shift end.
+      if (mins < t.endMin || extending) {
+        dayIdx = (dayIdx + 6) % 7; // rollback 1 day
+      }
+    }
+  } catch(e) { /* ignore — fallback to real calendar day */ }
+  return days[dayIdx];
 }
 
 // Working day number (1=Sun...5=Thu in this system; based on day name)
@@ -2643,10 +2663,11 @@ function _showLeavePickerForDay(day, chkEl) {
   popup.id = 'leavePickerPopup';
   popup.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:${bg};border:2px solid ${border};border-radius:12px;padding:20px 24px;z-index:99999;min-width:260px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.35);font-family:Lexend,sans-serif;`;
 
+  // Full-day submenu only — HL (Half-day Leave) is intentionally excluded here.
+  // Half-day is handled via the "½ HALF DAY" option in the preceding Half/Full prompt.
   const leaveTypes = [
     { code:'PL', label:'Planned Leave',   color:'#f0ad4e' },
     { code:'UL', label:'Unplanned Leave', color:'#e74c3c' },
-    { code:'HL', label:'Half-day Leave',  color:'#9b59b6' },
     { code:'SL', label:'Sick Leave',      color:'#3498db' },
   ];
 
@@ -2923,11 +2944,13 @@ function recalc() {
   const bUtil = (Math.round(qTotal/5)) > 0 ? Math.round(qProd/5) / Math.round(qTotal/5) : null;
 
   // === TODAY'S BALANCE CARD ===
-  // Use REMAINING per-day targets (t23/t24/t25) so carry-forward is accounted for
-  // t23 = remaining prod / daysLeft, t24 = remaining aux / daysLeft, t25 = remaining billing / daysLeft
-  const todayProdTarget    = daysLeft > 0 ? t23 : tProd;
-  const todayAuxTarget     = daysLeft > 0 ? t24 : tTotAux;
-  const todayBillingTarget = daysLeft > 0 ? t25 : tBilling;
+  // Today Bar targets = DAILY target (fixed per-day), independent of week carry-forward.
+  // This gives real-time accuracy for a single working day:
+  //   diff = today's actual − today's per-day target
+  //   negative = still needed today, positive = exceeded today's target.
+  const todayProdTarget    = tProd;
+  const todayAuxTarget     = tTotAux;
+  const todayBillingTarget = tBilling;
 
   // Today's actual = prod + coach + meet + well (billing-grade, no break/unavail)
   const todayBillingActual = tProdToday + tCoachToday + tMeetToday + tWellToday;
@@ -3020,20 +3043,139 @@ function toggleObPill(pill) {
   }
 }
 
+// ===== SHIFT TIMING CONFIGURATION =====
+// All shifts are 9.5 hours (570 minutes). `endCrossesMidnight` flags shifts
+// whose end time is on the next calendar day.
+const SHIFT_TIMINGS = {
+  morning: { label:'Morning', icon:'🌅', startMin:  6*60,      endMin: 15*60 + 30, endCrossesMidnight: false, rangeText:'6:00 AM – 3:30 PM'  },
+  evening: { label:'Evening', icon:'🌙', startMin: 16*60,      endMin:  1*60 + 30, endCrossesMidnight: true,  rangeText:'4:00 PM – 1:30 AM'  },
+  night:   { label:'Night',   icon:'🌑', startMin: 21*60,      endMin:  6*60 + 30, endCrossesMidnight: true,  rangeText:'9:00 PM – 6:30 AM'  },
+};
+const SHIFT_KEYS = ['morning','evening','night'];
+
+function getShiftTiming(shift) {
+  return SHIFT_TIMINGS[shift] || SHIFT_TIMINGS.morning;
+}
+// True if the shift crosses midnight (evening + night)
+function shiftCrossesMidnight(shift) {
+  return !!getShiftTiming(shift).endCrossesMidnight;
+}
+
 let _userShift = localStorage.getItem('userShift') || 'morning';
+if (!SHIFT_TIMINGS[_userShift]) _userShift = 'morning';
+
+function _paintShiftButton(btn, active) {
+  if (!btn) return;
+  btn.style.background = active ? '#1C2B3A' : '#fff';
+  btn.style.color      = active ? '#fff'    : '#1C2B3A';
+}
 
 function selectObShift(shift) {
+  if (!SHIFT_TIMINGS[shift]) return;
   _userShift = shift;
-  const mBtn = document.getElementById('ob-shift-morning');
-  const eBtn = document.getElementById('ob-shift-evening');
-  if (!mBtn || !eBtn) return;
-  if (shift === 'morning') {
-    mBtn.style.background='#1C2B3A'; mBtn.style.color='#fff';
-    eBtn.style.background='#fff'; eBtn.style.color='#1C2B3A';
-  } else {
-    eBtn.style.background='#1C2B3A'; eBtn.style.color='#fff';
-    mBtn.style.background='#fff'; mBtn.style.color='#1C2B3A';
+  SHIFT_KEYS.forEach(k => _paintShiftButton(document.getElementById('ob-shift-' + k), k === shift));
+}
+
+// ===== SHIFT EXTENSION / CLOSE STATE =====
+// _shiftCloseState stores { workDayKey, decision } in sessionStorage so the
+// "Shift Extending?" popup doesn't spam the user across refreshes within the
+// same shift. Keys:
+//   workDayKey — YYYY-MM-DD of the shift's START date
+//   decision   — 'extend' | 'close' | null (null = not yet prompted)
+function _shiftWorkDayKey(now = new Date()) {
+  const t = getShiftTiming(_userShift);
+  const d = new Date(now);
+  // If we're past midnight in a cross-midnight shift, the working day is yesterday.
+  if (t.endCrossesMidnight) {
+    const mins = now.getHours() * 60 + now.getMinutes();
+    if (mins < t.endMin) d.setDate(d.getDate() - 1);
   }
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function _readShiftCloseState() {
+  try { return JSON.parse(sessionStorage.getItem('shiftCloseState') || '{}'); } catch(e) { return {}; }
+}
+function _writeShiftCloseState(s) {
+  try { sessionStorage.setItem('shiftCloseState', JSON.stringify(s || {})); } catch(e) {}
+}
+function _resetShiftCloseState() {
+  try { sessionStorage.removeItem('shiftCloseState'); } catch(e) {}
+  _shiftPopupShownFor = null;
+}
+// True if the user has clicked "Yes — extending" for the CURRENT work day
+function _shiftExtending() {
+  const s = _readShiftCloseState();
+  return !!(s && s.decision === 'extend' && s.workDayKey === _shiftWorkDayKey());
+}
+// True if the user has manually closed the shift for the CURRENT work day
+function _shiftClosed() {
+  const s = _readShiftCloseState();
+  return !!(s && s.decision === 'close' && s.workDayKey === _shiftWorkDayKey());
+}
+
+let _shiftPopupShownFor = null; // tracks workDayKey the popup was shown for in this session
+
+// Called every minute from the recalc interval — shows the Extending popup
+// once the scheduled shift end is reached (only for cross-midnight shifts).
+function checkShiftEndPopup() {
+  const t = getShiftTiming(_userShift);
+  if (!t.endCrossesMidnight) return; // morning shift ends same day — no popup
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  // Popup window: from shift-end for the next 15 minutes
+  const withinEndWindow = (mins >= t.endMin && mins <= t.endMin + 15);
+  if (!withinEndWindow) return;
+  const wk = _shiftWorkDayKey(now);
+  if (_shiftPopupShownFor === wk) return;
+  const s = _readShiftCloseState();
+  if (s.workDayKey === wk && (s.decision === 'extend' || s.decision === 'close')) return;
+  _shiftPopupShownFor = wk;
+  showShiftEndPopup();
+}
+
+function showShiftEndPopup() {
+  document.getElementById('shiftEndPopup')?.remove();
+  const isDark = document.body.classList.contains('dark');
+  const bg = isDark ? '#1a1a1a' : '#fff';
+  const border = isDark ? '#333' : '#1C2B3A';
+  const txt = isDark ? '#e8e8e8' : '#1C2B3A';
+  const t = getShiftTiming(_userShift);
+  const endH = Math.floor(t.endMin/60), endM = t.endMin%60;
+  const endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
+  const popup = document.createElement('div');
+  popup.id = 'shiftEndPopup';
+  popup.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:${bg};border:2px solid ${border};border-radius:12px;padding:22px 26px;z-index:99999;min-width:300px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,0.35);font-family:Lexend,sans-serif;`;
+  popup.innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:${txt};margin-bottom:6px;">${t.icon} ${t.label} Shift Ending</div>
+    <div style="font-size:10px;color:#888;margin-bottom:16px;line-height:1.5;">Your scheduled end time (${endStr}) has been reached. Are you extending your shift?</div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="decideShiftEnd('extend')" style="flex:1;padding:12px 6px;font-family:Lexend,sans-serif;font-size:11px;font-weight:700;background:#27ae6022;color:#27ae60;border:2px solid #27ae60;border-radius:8px;cursor:pointer;line-height:1.3;">
+        ✓ YES — EXTENDING<br><span style="font-size:8px;font-weight:400;opacity:0.85;">Keep logging to current working day</span>
+      </button>
+      <button onclick="decideShiftEnd('close')" style="flex:1;padding:12px 6px;font-family:Lexend,sans-serif;font-size:11px;font-weight:700;background:#e74c3c22;color:#e74c3c;border:2px solid #e74c3c;border-radius:8px;cursor:pointer;line-height:1.3;">
+        ✕ NO — CLOSE SHIFT<br><span style="font-size:8px;font-weight:400;opacity:0.85;">Finalize & move to next day</span>
+      </button>
+    </div>`;
+  document.body.appendChild(popup);
+}
+
+function decideShiftEnd(decision) {
+  const wk = _shiftWorkDayKey();
+  _writeShiftCloseState({ workDayKey: wk, decision });
+  document.getElementById('shiftEndPopup')?.remove();
+  recalc();
+  if (window.saveUserData) window.saveUserData();
+}
+
+// Manual "Close Shift" button — available from header
+function manualCloseShift() {
+  const t = getShiftTiming(_userShift);
+  const msg = t.endCrossesMidnight
+    ? `Close current ${t.label} shift? Dashboard will move to the next working day.`
+    : `Close current ${t.label} shift? Today's entry will be finalized.`;
+  if (!confirm(msg)) return;
+  decideShiftEnd('close');
 }
 
 // ── SPLIT-ENTRY POPUP (double-click on dur input for evening shift) ──
@@ -3057,9 +3199,27 @@ function openSplitPopup(inputEl) {
   popup.id = 'splitPopup';
   popup.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:${bg};border:2px solid ${border};border-radius:12px;padding:20px 24px;z-index:99999;min-width:280px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.35);font-family:Lexend,sans-serif;`;
 
+  const timeInpStyle = `width:100%;padding:8px 10px;border:1.5px solid ${inputBorder};border-radius:8px;font-family:Lexend,sans-serif;font-size:13px;font-weight:700;box-sizing:border-box;outline:none;background:${inputBg};color:${txt};`;
+
   popup.innerHTML = `
     <div style="font-size:11px;font-weight:700;color:${txt};margin-bottom:4px;letter-spacing:0.5px;">${label} — ${fieldName}</div>
-    <div style="font-size:8px;color:#888;margin-bottom:14px;">Formula: (②  − ①) + ③ = Total</div>
+    <div style="font-size:8px;color:#888;margin-bottom:12px;">Enter either a START/END time range OR durations. Cross-midnight is handled automatically.</div>
+
+    <!-- Clock-time range (crosses midnight) -->
+    <div style="border:1px dashed ${inputBorder};border-radius:8px;padding:10px;margin-bottom:12px;">
+      <div style="font-size:9px;font-weight:700;color:#8e44ad;margin-bottom:6px;letter-spacing:0.4px;">⏱ CLOCK TIMES (optional)</div>
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;">
+          <label style="font-size:8px;font-weight:700;color:#888;display:block;margin-bottom:2px;">START</label>
+          <input id="split-start" type="time" style="${timeInpStyle}border-color:#8e44ad !important;" oninput="splitCalcTotal()">
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:8px;font-weight:700;color:#888;display:block;margin-bottom:2px;">END</label>
+          <input id="split-end" type="time" style="${timeInpStyle}border-color:#8e44ad !important;" oninput="splitCalcTotal()">
+        </div>
+      </div>
+      <div id="split-range-note" style="font-size:8px;color:#888;margin-top:6px;min-height:11px;"></div>
+    </div>
 
     <div style="margin-bottom:10px;">
       <label style="font-size:9px;font-weight:700;color:#e67e22;display:block;margin-bottom:4px;">① ALREADY LOGGED (subtract)</label>
@@ -3073,8 +3233,8 @@ function openSplitPopup(inputEl) {
       <label style="font-size:9px;font-weight:700;color:#27ae60;display:block;margin-bottom:4px;">② TOTAL DONE TODAY</label>
       <input id="split-total-done" type="text" placeholder="HH:MM" maxlength="5"
         style="${inpStyle}border-color:#27ae60 !important;"
-        oninput="fmtDurInput(this);splitCalcTotal()">
-      <div style="font-size:8px;color:#888;margin-top:2px;">Your total production so far today</div>
+        oninput="this.dataset.userEdited='1';fmtDurInput(this);splitCalcTotal()">
+      <div style="font-size:8px;color:#888;margin-top:2px;">Auto-fills from START/END above, or enter manually</div>
     </div>
 
     <div style="margin-bottom:14px;">
@@ -3117,14 +3277,45 @@ function openSplitPopup(inputEl) {
   document.getElementById('split-sub').focus();
 }
 
+// Helpers shared by split popup: duration from HH:MM + 24h-aware clock-time range
+function _splitPM(v) {
+  if (!v) return 0;
+  const p = v.split(':'); return (parseInt(p[0])||0)*60+(parseInt(p[1])||0);
+}
+// Compute duration from START/END clock times. If END < START, auto-add 24h
+// (end is on the next calendar day). Returns { mins, crossed } or null if incomplete.
+function _splitRangeMins() {
+  const s = document.getElementById('split-start')?.value;
+  const e = document.getElementById('split-end')?.value;
+  if (!s || !e) return null;
+  const sm = _splitPM(s), em = _splitPM(e);
+  let diff = em - sm;
+  let crossed = false;
+  if (diff < 0) { diff += 24 * 60; crossed = true; }
+  if (diff === 0) return null;
+  return { mins: diff, crossed };
+}
+
 function splitCalcTotal() {
-  function pm(v) {
-    if (!v) return 0;
-    const p = v.split(':'); return (parseInt(p[0])||0)*60+(parseInt(p[1])||0);
+  // If START/END provided, auto-populate "TOTAL DONE TODAY" (field ②) with the
+  // cross-midnight-aware duration. User can still override by typing into ②.
+  const range = _splitRangeMins();
+  const note = document.getElementById('split-range-note');
+  if (range) {
+    const hh = Math.floor(range.mins/60), mm = range.mins%60;
+    const rStr = hh + ':' + String(mm).padStart(2,'0');
+    const doneEl = document.getElementById('split-total-done');
+    if (doneEl && !doneEl.dataset.userEdited) doneEl.value = rStr;
+    if (note) note.textContent = range.crossed
+      ? `Crosses midnight → ${rStr} (end is next day)`
+      : `Duration: ${rStr}`;
+  } else if (note) {
+    note.textContent = '';
   }
-  const sub  = pm(document.getElementById('split-sub')?.value||'');
-  const done = pm(document.getElementById('split-total-done')?.value||'');
-  const aftr = pm(document.getElementById('split-after')?.value||'');
+
+  const sub  = _splitPM(document.getElementById('split-sub')?.value||'');
+  const done = _splitPM(document.getElementById('split-total-done')?.value||'');
+  const aftr = _splitPM(document.getElementById('split-after')?.value||'');
   // Formula: (done - sub) + after
   const tot = Math.max(0, (done - sub)) + aftr;
   const h = Math.floor(tot/60), m = tot%60;
@@ -3140,13 +3331,9 @@ function splitCalcTotal() {
 }
 
 function applySplitPopup(inputId) {
-  function pm(v) {
-    if (!v) return 0;
-    const p = v.split(':'); return (parseInt(p[0])||0)*60+(parseInt(p[1])||0);
-  }
-  const sub  = pm(document.getElementById('split-sub')?.value||'');
-  const done = pm(document.getElementById('split-total-done')?.value||'');
-  const aftr = pm(document.getElementById('split-after')?.value||'');
+  const sub  = _splitPM(document.getElementById('split-sub')?.value||'');
+  const done = _splitPM(document.getElementById('split-total-done')?.value||'');
+  const aftr = _splitPM(document.getElementById('split-after')?.value||'');
   const tot = Math.max(0, (done - sub)) + aftr;
   if (tot === 0) { closeSplitPopup(); return; }
   const h = Math.floor(tot/60), m = tot%60;
@@ -3782,6 +3969,10 @@ window.addEventListener('load', () => {
   updateClock();
   setInterval(() => { updateClock(); }, 1000);
   setInterval(() => { recalc(); }, 60000);
+  // Poll every 30s for shift-end popup (cross-midnight shifts only)
+  setInterval(() => { try { checkShiftEndPopup(); } catch(e) {} }, 30000);
+  // Also run one check shortly after load in case the user opens the app exactly at shift end
+  setTimeout(() => { try { checkShiftEndPopup(); } catch(e) {} }, 2000);
 
   // Load saved shift
   _userShift = localStorage.getItem('userShift') || 'morning';
@@ -3789,7 +3980,7 @@ window.addEventListener('load', () => {
   // Evening shift only: double-click on PRODUCTION inputs opens 3-input split popup
   document.querySelectorAll('input.dur').forEach(inp => {
     inp.addEventListener('dblclick', function(e) {
-      if (_userShift !== 'evening') return; // morning shift = no popup
+      if (!shiftCrossesMidnight(_userShift)) return; // morning shift = no popup
       const isProd = inp.id && inp.id.startsWith('prod_');
       if (!isProd) return; // popup only for production column
       e.preventDefault();
@@ -4757,6 +4948,19 @@ function saveDbEntryEdits(idx) {
 
 function renderDbEntries() {
   if (typeof _backfillDbLeaveStatus === 'function') _backfillDbLeaveStatus();
+  // Always recompute totals (AVG util, sums, balance) before rendering so any stale
+  // weighted-util / out-of-sync values from older snapshots are corrected on display.
+  if (typeof _recomputeEntryTotals === 'function') {
+    let _changed = false;
+    dbEntries.forEach(e => {
+      const before = e.rows && e.rows.find(r => r.type === 'total');
+      const beforeUtil = before ? before.util : null;
+      _recomputeEntryTotals(e);
+      const after = e.rows && e.rows.find(r => r.type === 'total');
+      if (after && after.util !== beforeUtil) _changed = true;
+    });
+    if (_changed) lsSet('db_snapshots', dbEntries);
+  }
   const container = document.getElementById('dbEntriesList');
   if (!dbEntries.length) {
     container.innerHTML = '<div class="db-empty">No snapshots yet. Click "Push to Database" to capture the main table.</div>';
@@ -5426,22 +5630,27 @@ async function settingsSavePassword() {
 }
 
 function settingsSaveShift(shift) {
+  if (!SHIFT_TIMINGS[shift]) return;
+  const prev = _userShift;
   _userShift = shift;
   localStorage.setItem('userShift', shift);
-  // Update button styles
-  const mBtn = document.getElementById('set-shift-morning');
-  const eBtn = document.getElementById('set-shift-evening');
-  if (mBtn && eBtn) {
-    if (shift === 'morning') {
-      mBtn.className = 'auth-btn'; mBtn.style.flex = '1'; mBtn.style.padding = '10px 6px';
-      eBtn.className = 'auth-btn secondary'; eBtn.style.flex = '1'; eBtn.style.padding = '10px 6px';
-    } else {
-      mBtn.className = 'auth-btn secondary'; mBtn.style.flex = '1'; mBtn.style.padding = '10px 6px';
-      eBtn.className = 'auth-btn'; eBtn.style.flex = '1'; eBtn.style.padding = '10px 6px';
-    }
-  }
+  // Update button styles — active = primary, inactive = secondary
+  SHIFT_KEYS.forEach(k => {
+    const btn = document.getElementById('set-shift-' + k);
+    if (!btn) return;
+    btn.className = 'auth-btn' + (k === shift ? '' : ' secondary');
+    btn.style.flex = '1';
+    btn.style.minWidth = '90px';
+    btn.style.padding = '10px 4px';
+  });
+  // Reset shift-end decision only when the shift actually changed (not on modal open)
+  if (prev !== shift) _resetShiftCloseState();
   const msg = document.getElementById('set-shift-msg');
-  if (msg) { msg.textContent = `✓ Saved — ${shift === 'morning' ? 'Morning' : 'Evening'} shift`; setTimeout(()=>msg.textContent='',2500); }
+  if (msg) {
+    const t = getShiftTiming(shift);
+    msg.textContent = `✓ Saved — ${t.label} shift (${t.rangeText})`;
+    setTimeout(() => msg.textContent = '', 2500);
+  }
 }
 
 function settingsSaveBilling() {
@@ -5532,11 +5741,12 @@ function authSignOut() {
     </div>
     <div class="onboard-row">
       <label>YOUR SHIFT</label>
-      <div style="display:flex;gap:8px;margin-top:4px;">
-        <button type="button" id="ob-shift-morning" onclick="selectObShift('morning')" style="flex:1;padding:8px;font-family:'Lexend',sans-serif;font-size:10px;font-weight:700;border:2px solid #1C2B3A;border-radius:6px;background:#1C2B3A;color:#fff;cursor:pointer;">🌅 Morning<br><span style="font-size:8px;font-weight:400;">6:00 AM – 3:30 PM</span></button>
-        <button type="button" id="ob-shift-evening" onclick="selectObShift('evening')" style="flex:1;padding:8px;font-family:'Lexend',sans-serif;font-size:10px;font-weight:700;border:2px solid #1C2B3A;border-radius:6px;background:#fff;color:#1C2B3A;cursor:pointer;">🌙 Evening<br><span style="font-size:8px;font-weight:400;">4:00 PM – 1:30 AM</span></button>
+      <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
+        <button type="button" id="ob-shift-morning" onclick="selectObShift('morning')" style="flex:1;min-width:90px;padding:8px 4px;font-family:'Lexend',sans-serif;font-size:10px;font-weight:700;border:2px solid #1C2B3A;border-radius:6px;background:#1C2B3A;color:#fff;cursor:pointer;">🌅 Morning<br><span style="font-size:8px;font-weight:400;">6:00 AM – 3:30 PM</span></button>
+        <button type="button" id="ob-shift-evening" onclick="selectObShift('evening')" style="flex:1;min-width:90px;padding:8px 4px;font-family:'Lexend',sans-serif;font-size:10px;font-weight:700;border:2px solid #1C2B3A;border-radius:6px;background:#fff;color:#1C2B3A;cursor:pointer;">🌙 Evening<br><span style="font-size:8px;font-weight:400;">4:00 PM – 1:30 AM</span></button>
+        <button type="button" id="ob-shift-night" onclick="selectObShift('night')" style="flex:1;min-width:90px;padding:8px 4px;font-family:'Lexend',sans-serif;font-size:10px;font-weight:700;border:2px solid #1C2B3A;border-radius:6px;background:#fff;color:#1C2B3A;cursor:pointer;">🌑 Night<br><span style="font-size:8px;font-weight:400;">9:00 PM – 6:30 AM</span></button>
       </div>
-      <div class="hint">Evening shift workers can split entry across midnight.</div>
+      <div class="hint">Evening & Night shifts span midnight — split-entry popup is available for both.</div>
     </div>
     <div class="onboard-err" id="ob-err"></div>
     <button class="onboard-save-btn" onclick="saveOnboarding()">LET'S GO →</button>
@@ -5565,10 +5775,11 @@ function authSignOut() {
     <h3>ACCOUNT SETTINGS <span onclick="closeSettings()">✕</span></h3>
 
     <div class="settings-section">Shift</div>
-    <p style="font-size:9px;color:#888;margin-bottom:10px;">Your shift determines how production input works. Evening shift unlocks the 3-part split popup (double-click production).</p>
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <button id="set-shift-morning" onclick="settingsSaveShift('morning')" class="auth-btn" style="flex:1;padding:10px 6px;">🌅 Morning<br><span style="font-size:8px;font-weight:400;opacity:0.8;">6:00 AM – 3:30 PM</span></button>
-      <button id="set-shift-evening" onclick="settingsSaveShift('evening')" class="auth-btn secondary" style="flex:1;padding:10px 6px;">🌙 Evening<br><span style="font-size:8px;font-weight:400;opacity:0.8;">4:00 PM – 1:30 AM</span></button>
+    <p style="font-size:9px;color:#888;margin-bottom:10px;">Your shift determines how production input works. Evening &amp; Night shifts unlock the 3-part split popup with clock-time range (double-click production). Cross-midnight sessions are handled automatically.</p>
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+      <button id="set-shift-morning" onclick="settingsSaveShift('morning')" class="auth-btn" style="flex:1;min-width:90px;padding:10px 4px;">🌅 Morning<br><span style="font-size:8px;font-weight:400;opacity:0.8;">6:00 AM – 3:30 PM</span></button>
+      <button id="set-shift-evening" onclick="settingsSaveShift('evening')" class="auth-btn secondary" style="flex:1;min-width:90px;padding:10px 4px;">🌙 Evening<br><span style="font-size:8px;font-weight:400;opacity:0.8;">4:00 PM – 1:30 AM</span></button>
+      <button id="set-shift-night" onclick="settingsSaveShift('night')" class="auth-btn secondary" style="flex:1;min-width:90px;padding:10px 4px;">🌑 Night<br><span style="font-size:8px;font-weight:400;opacity:0.8;">9:00 PM – 6:30 AM</span></button>
     </div>
     <div class="settings-save" id="set-shift-msg"></div>
 
