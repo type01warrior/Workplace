@@ -1936,8 +1936,9 @@ body:not(.dark) #statusBarSpacer { background: #1C2B3A; }
     <!-- Desktop buttons -->
     <button onclick="syncData()" id="syncBtnD" class="tb-btn2 tb-desktop-show">☁ SYNC</button>
     <button onclick="refreshFromCloud()" id="refreshBtnD" class="tb-btn2 tb-desktop-show">⟳ REFRESH</button>
-    <button onclick="manualCloseShift()" id="closeShiftBtn" class="tb-btn2 tb-desktop-show" title="Finalize current shift and roll dashboard to next working day">⏻ CLOSE SHIFT</button>
+    <button id="shiftCtrlBtn" class="tb-btn2 tb-desktop-show" style="background:#27ae60;color:#fff;border-color:#27ae60;">▶ START SHIFT</button>
     <div class="tb-desktop-show" style="margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0;">
+      <span id="shiftWorkDayLabel" style="display:none;font-size:10px;font-weight:700;color:#27ae60;background:#27ae6022;padding:3px 8px;border-radius:6px;"></span>
       <span id="logoutTimeBadge2" class="tb-logout-badge" style="font-size:11px;">🕐 –</span>
       <span class="tb-time" id="timeNow"></span>
       <span class="tb-wd" style="display:none;">WD:<strong id="workingDays">5</strong></span>
@@ -2353,7 +2354,18 @@ function getInputMins(id) {
 // Week starts on Saturday. If today IS Saturday, this week's end-Friday is 6 days later.
 // If today is any Sun–Fri, this week's end-Friday is the coming (or same-day) Friday.
 function getWeekLabel() {
-  const today = new Date();
+  // If a Start-Shift session is active, anchor the week label to the shift's
+  // start date so it doesn't change after crossing midnight.
+  let today = new Date();
+  try {
+    if (typeof _activeShiftSession === 'function') {
+      const s = _activeShiftSession();
+      if (s && s.workDayKey) {
+        const [yy, mm, dd] = s.workDayKey.split('-').map(n => parseInt(n, 10));
+        today = new Date(yy, mm - 1, dd);
+      }
+    }
+  } catch(e) { /* use real today */ }
   const day = today.getDay(); // 0=Sun,1=Mon,...,5=Fri,6=Sat
   // Days until the Friday that ENDS this week:
   // Sat(6)→+6, Sun(0)→+5, Mon(1)→+4, Tue(2)→+3, Wed(3)→+2, Thu(4)→+1, Fri(5)→+0
@@ -2383,6 +2395,17 @@ function getWeekLabel() {
 // previous day even past the scheduled end (see Shift Extension popup).
 function getTodayDayName() {
   const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+  // Explicit Start-Shift session locks the working day to its start date.
+  try {
+    if (typeof _activeShiftSession === 'function') {
+      const session = _activeShiftSession();
+      if (session && session.workDayKey) {
+        const [yy, mm, dd] = session.workDayKey.split('-').map(n => parseInt(n, 10));
+        return days[new Date(yy, mm - 1, dd).getDay()];
+      }
+    }
+  } catch(e) { /* fall through to implicit shift logic */ }
+
   const now = new Date();
   let dayIdx = now.getDay();
   try {
@@ -3076,6 +3099,131 @@ function selectObShift(shift) {
   SHIFT_KEYS.forEach(k => _paintShiftButton(document.getElementById('ob-shift-' + k), k === shift));
 }
 
+// ===== EXPLICIT SHIFT SESSION (Start Shift / End Shift) =====
+// When a user clicks "Start Shift", we lock the calendar date and shift type
+// into localStorage. While the session is active, _activeShiftSession() returns
+// it; getTodayDayName() and _shiftWorkDayKey() use the LOCKED date instead of
+// computing from the current clock — so crossing midnight does NOT change the
+// working day. The session is cleared by endShift().
+function _readShiftSession() {
+  try { return JSON.parse(localStorage.getItem('shiftSession') || 'null'); }
+  catch(e) { return null; }
+}
+function _writeShiftSession(s) {
+  try {
+    if (s === null) localStorage.removeItem('shiftSession');
+    else localStorage.setItem('shiftSession', JSON.stringify(s));
+  } catch(e) {}
+}
+function _activeShiftSession() {
+  const s = _readShiftSession();
+  return (s && s.startMs && !s.endMs) ? s : null;
+}
+// Format ms timestamp → "DD Mon YYYY, HH:MM AM/PM"
+function _fmtSessionTs(ms) {
+  const d = new Date(ms);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${String(d.getDate()).padStart(2,'0')} ${months[d.getMonth()]} ${d.getFullYear()}, ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function startShift() {
+  if (_activeShiftSession()) {
+    alert('A shift is already active. End the current shift before starting a new one.');
+    return;
+  }
+  const now = new Date();
+  const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0'), dd = String(now.getDate()).padStart(2,'0');
+  // Workday key = the calendar date the shift STARTED on, regardless of crossing midnight later.
+  const workDayKey = `${y}-${m}-${dd}`;
+  _writeShiftSession({
+    startMs: now.getTime(),
+    workDayKey,
+    shift: _userShift,
+  });
+  // Reset any prior implicit extend/close decision so it doesn't interfere.
+  _resetShiftCloseState();
+  _renderShiftButton();
+  recalc();
+  if (window.saveUserData) window.saveUserData();
+}
+
+function endShift() {
+  const session = _activeShiftSession();
+  if (!session) return;
+  if (!confirm('Are you sure you want to end your shift?')) return;
+  const endMs = Date.now();
+  const elapsedMins = Math.max(0, Math.floor((endMs - session.startMs) / 60000));
+  const hh = Math.floor(elapsedMins / 60);
+  const mm = elapsedMins % 60;
+  // Clear the session BEFORE showing summary so dashboard rolls forward immediately.
+  _writeShiftSession(null);
+  _resetShiftCloseState();
+  _renderShiftButton();
+  recalc();
+  showShiftSummaryPopup(session, endMs, hh, mm);
+  if (window.saveUserData) window.saveUserData();
+}
+
+function showShiftSummaryPopup(session, endMs, hh, mm) {
+  document.getElementById('shiftSummaryPopup')?.remove();
+  const isDark = document.body.classList.contains('dark');
+  const bg = isDark ? '#1a1a1a' : '#fff';
+  const border = isDark ? '#333' : '#1C2B3A';
+  const txt = isDark ? '#e8e8e8' : '#1C2B3A';
+  const t = getShiftTiming(session.shift || _userShift);
+  const popup = document.createElement('div');
+  popup.id = 'shiftSummaryPopup';
+  popup.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:${bg};border:2px solid ${border};border-radius:12px;padding:22px 26px;z-index:99999;min-width:320px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,0.35);font-family:Lexend,sans-serif;`;
+  popup.innerHTML = `
+    <div style="font-size:13px;font-weight:700;color:${txt};margin-bottom:6px;">✅ Shift Ended — ${t.icon} ${t.label}</div>
+    <div style="font-size:9px;color:#888;margin-bottom:14px;">Working day: ${session.workDayKey}</div>
+    <div style="background:${isDark?'#0d1822':'#f0f6fc'};border-radius:8px;padding:12px 14px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:${txt};margin-bottom:6px;"><span>Started</span><span style="font-weight:700;">${_fmtSessionTs(session.startMs)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:${txt};margin-bottom:10px;"><span>Ended</span><span style="font-weight:700;">${_fmtSessionTs(endMs)}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px dashed ${isDark?'#333':'#ccd6e0'};padding-top:10px;">
+        <span style="font-size:10px;color:#888;">TOTAL ELAPSED</span>
+        <span style="font-size:18px;font-weight:700;color:#27ae60;letter-spacing:0.5px;">${hh}h ${String(mm).padStart(2,'0')}m</span>
+      </div>
+    </div>
+    <button onclick="document.getElementById('shiftSummaryPopup').remove()"
+      style="width:100%;padding:10px;font-family:Lexend,sans-serif;font-size:11px;font-weight:700;background:#1C2B3A;color:#fff;border:none;border-radius:8px;cursor:pointer;">
+      ✓ Done
+    </button>`;
+  document.body.appendChild(popup);
+}
+
+// Toggle the header button between "▶ Start Shift" (no active session) and
+// "⏻ End Shift" (active). Also shows the locked workday when active.
+function _renderShiftButton() {
+  const btn = document.getElementById('shiftCtrlBtn');
+  if (!btn) return;
+  const session = _activeShiftSession();
+  if (session) {
+    btn.textContent = '⏻ END SHIFT';
+    btn.style.background = '#c0392b';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#c0392b';
+    btn.onclick = endShift;
+    btn.title = `Active shift since ${_fmtSessionTs(session.startMs)} (working day ${session.workDayKey})`;
+  } else {
+    btn.textContent = '▶ START SHIFT';
+    btn.style.background = '#27ae60';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#27ae60';
+    btn.onclick = startShift;
+    btn.title = 'Start a new shift session — locks today as the working day';
+  }
+  // Optional: reflect active workday in the time badge area
+  const badge = document.getElementById('shiftWorkDayLabel');
+  if (badge) {
+    badge.style.display = session ? 'inline' : 'none';
+    badge.textContent = session ? `📌 ${session.workDayKey}` : '';
+  }
+}
+
 // ===== SHIFT EXTENSION / CLOSE STATE =====
 // _shiftCloseState stores { workDayKey, decision } in sessionStorage so the
 // "Shift Extending?" popup doesn't spam the user across refreshes within the
@@ -3083,6 +3231,9 @@ function selectObShift(shift) {
 //   workDayKey — YYYY-MM-DD of the shift's START date
 //   decision   — 'extend' | 'close' | null (null = not yet prompted)
 function _shiftWorkDayKey(now = new Date()) {
+  // Explicit Start-Shift session always wins — keeps the workday locked.
+  const session = _activeShiftSession();
+  if (session && session.workDayKey) return session.workDayKey;
   const t = getShiftTiming(_userShift);
   const d = new Date(now);
   // If we're past midnight in a cross-midnight shift, the working day is yesterday.
@@ -3119,6 +3270,9 @@ let _shiftPopupShownFor = null; // tracks workDayKey the popup was shown for in 
 // Called every minute from the recalc interval — shows the Extending popup
 // once the scheduled shift end is reached (only for cross-midnight shifts).
 function checkShiftEndPopup() {
+  // If the user is using the explicit Start/End Shift flow, suppress the
+  // auto popup — they control the lifecycle manually now.
+  if (_activeShiftSession()) return;
   const t = getShiftTiming(_userShift);
   if (!t.endCrossesMidnight) return; // morning shift ends same day — no popup
   const now = new Date();
@@ -3965,6 +4119,8 @@ window.addEventListener('load', () => {
     if (icon) icon.textContent = '🌙';
   }
   updateWorkingDayRows();
+  // Render Start/End Shift button based on any persisted session
+  try { _renderShiftButton(); } catch(e) {}
   recalc();
   updateClock();
   setInterval(() => { updateClock(); }, 1000);
