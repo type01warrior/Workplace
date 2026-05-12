@@ -1028,36 +1028,59 @@
     .tb-logout-badge { display:inline-flex !important; }
   }
 
-  /* ── App Tour ── */
+  /* ── App Tour (guided spotlight + arrow) ── */
   #appTour { display:none; position:fixed; inset:0; z-index:99998; pointer-events:none; }
   #appTour.active { display:block; }
-  #appTour-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:99998; }
+  /* Four-piece dim overlay forms a "cutout" around the highlighted target. */
+  .tour-mask { position:fixed; background:rgba(15,20,30,0.72); z-index:99998; pointer-events:auto; transition:all 0.25s ease; }
+  body.dark .tour-mask { background:rgba(0,0,0,0.82); }
+  /* Glowing ring around the spotlight target */
+  #appTour-ring {
+    position:fixed; z-index:99998; pointer-events:none;
+    border-radius:10px; box-shadow:0 0 0 3px #ffd166, 0 0 0 6px rgba(255,209,102,0.35), 0 0 24px 4px rgba(255,209,102,0.55);
+    transition:all 0.28s cubic-bezier(0.4,0,0.2,1);
+    animation: tourRingPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes tourRingPulse {
+    0%,100% { box-shadow:0 0 0 3px #ffd166, 0 0 0 6px rgba(255,209,102,0.35), 0 0 24px 4px rgba(255,209,102,0.55); }
+    50%     { box-shadow:0 0 0 3px #ffd166, 0 0 0 10px rgba(255,209,102,0.15), 0 0 32px 8px rgba(255,209,102,0.75); }
+  }
+  /* Arrow that points from card → target */
+  #appTour-arrow {
+    position:fixed; z-index:99999; pointer-events:none;
+    width:0; height:0; transition:all 0.28s cubic-bezier(0.4,0,0.2,1);
+  }
+  /* Tooltip card */
   #appTour-card {
     position:fixed; z-index:99999; pointer-events:all;
-    background:#fff; border:2px solid #1C2B3A; border-radius:14px;
-    padding:20px 24px; max-width:320px; width:90vw;
-    box-shadow:0 12px 40px rgba(0,0,0,0.4);
+    background:#fff; border:2px solid #ffd166; border-radius:14px;
+    padding:18px 20px; max-width:320px; width:calc(100vw - 32px);
+    box-shadow:0 12px 40px rgba(0,0,0,0.5);
     font-family:'Lexend',sans-serif;
-    bottom: 80px; left: 50%; transform: translateX(-50%);
-    transition: opacity 0.2s;
+    transition: all 0.28s cubic-bezier(0.4,0,0.2,1);
   }
-  body.dark #appTour-card { background:#1a1a1a; border-color:#333; }
-  #appTour-step { font-size:8px; font-weight:700; color:#888; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
-  #appTour-icon { font-size:28px; margin-bottom:8px; display:block; }
+  body.dark #appTour-card { background:#1a1a1a; border-color:#ffd166; }
+  #appTour-step { font-size:8px; font-weight:700; color:#b8862c; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:6px; }
+  body.dark #appTour-step { color:#ffd166; }
+  #appTour-icon { font-size:24px; margin-bottom:6px; display:block; }
   #appTour-title { font-size:13px; font-weight:700; color:#1C2B3A; margin-bottom:6px; }
   body.dark #appTour-title { color:#e8e8e8; }
-  #appTour-body { font-size:10px; color:#556; line-height:1.6; margin-bottom:16px; }
+  #appTour-body { font-size:10px; color:#556; line-height:1.6; margin-bottom:14px; }
   body.dark #appTour-body { color:#9ab; }
-  .tour-progress { display:flex; gap:4px; margin-bottom:14px; }
+  .tour-progress { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
   .tour-dot { width:6px; height:6px; border-radius:50%; background:#dde; transition:background 0.2s; }
-  .tour-dot.active { background:#1C2B3A; }
+  .tour-dot.active { background:#ffd166; transform:scale(1.3); }
+  .tour-dot.done { background:#1C2B3A; }
   body.dark .tour-dot { background:#333; }
-  body.dark .tour-dot.active { background:#7ab; }
-  .tour-btn-row { display:flex; gap:8px; }
-  .tour-btn { flex:1; padding:9px; font-family:'Lexend',sans-serif; font-size:10px; font-weight:700; border-radius:8px; cursor:pointer; }
-  .tour-btn-next { background:#1C2B3A; color:#fff; border:none; }
+  body.dark .tour-dot.done { background:#7ab; }
+  .tour-btn-row { display:flex; gap:6px; align-items:center; }
+  .tour-btn { padding:8px 12px; font-family:'Lexend',sans-serif; font-size:10px; font-weight:700; border-radius:8px; cursor:pointer; border:none; }
+  .tour-btn-next { flex:1; background:#1C2B3A; color:#fff; }
+  .tour-btn-back { background:transparent; color:#888; border:1.5px solid #dde; }
   .tour-btn-skip { background:transparent; color:#888; border:1.5px solid #dde; }
-  body.dark .tour-btn-skip { border-color:#333; }
+  body.dark .tour-btn-back, body.dark .tour-btn-skip { border-color:#333; }
+  /* Tour: while active, prevent body scroll bleed and let target receive clicks visually. */
+  body.tour-active { overflow:hidden; }
 
   body.dark #dbExportCard { background:#1a1a1a !important; border-color:#333 !important; }
   body.dark #dbExportCard span, body.dark #dbExportCard label { color:#e8e8e8 !important; }
@@ -3550,27 +3573,224 @@ document.addEventListener('click', function(e) {
 });
 
 
-// ═══════════════ APP TOUR ═══════════════
+// ═══════════════ APP TOUR (guided spotlight + arrow) ═══════════════
+// Each step optionally anchors to a DOM element via `target` (CSS selector).
+// `placement` hints which side of the target to put the card; the renderer
+// will flip if there isn't room. `target: null` => centered intro/outro card.
 const TOUR_STEPS = [
-  { icon:'👋', title:'Welcome to WorkPlace', body:'This quick tour explains every part of the app. Hit Next to go step by step.' },
-  { icon:'📋', title:'The Time Table', body:'The main table is where you log your daily time. Each row is a working day (Sun–Thu). Columns: Production, Coaching, Meeting, Wellbeing, Break/Lunch, Unavailable, and Job Count.' },
-  { icon:'⏱', title:'Entering Time', body:'Tap any cell and type time in HH:MM format (e.g. 7:30). For Evening shift, double-click the Production cell to use the 3-input midnight-split calculator.' },
-  { icon:'✅', title:'Day Checkboxes', body:'The checkbox on each row enables/disables that day. Unchecking a day asks you to mark a leave type (PL, UL, HL, SL) which is saved to your Attendance Calendar.' },
-  { icon:'📊', title:'Bottom Panels', body:"Four info panels below the table: Billing (daily & weekly totals), Week Progress (done vs target), Remaining (how much per day you need), and Today (today's balance)." },
-  { icon:'📅', title:'Attendance Calendar', body:"View your full year's attendance. Tap any date to cycle through leave types. Today's date is highlighted in gold. Open it from the Calendar button." },
-  { icon:'🗄', title:'Database & Push', body:'Push your weekly data to the database with ⬆ PUSH TO DB. Tap DATABASE to browse and export previous weeks. You can also export them as PDF.' },
-  { icon:'⚙', title:'Settings & Sync', body:'Use Settings to update your shift (Morning/Evening), targets, email, or password. Use SYNC to save to cloud, REFRESH to load the latest from cloud. Your data auto-saves after every change.' },
+  {
+    icon:'👋', title:'Welcome to WorkPlace',
+    body:"Let's take a 60-second tour. We'll highlight each feature with an arrow so you know exactly where to look.",
+    target: null, placement: 'center'
+  },
+  {
+    icon:'▶', title:'Start Your Shift',
+    body:"Tap START SHIFT to lock today as your working day. The dashboard will stay on this date even after midnight — until you tap END SHIFT.",
+    target: '#shiftCtrlBtn', placement: 'bottom'
+  },
+  {
+    icon:'📋', title:'The Weekly Time Table',
+    body:"Each row is a working day (Sun–Thu). Columns: Production, Coaching, Meeting, Wellbeing, Break/Lunch, Unavailable, and Job Count. Totals update live.",
+    target: '#row_mon', placement: 'top'
+  },
+  {
+    icon:'⏱', title:'Entering Time',
+    body:"Tap any cell and type time as HH:MM (e.g. 7:30). On Evening/Night shift, double-click a PRODUCTION cell to open the 3-input split popup with START/END clock times.",
+    target: '#prod_mon', placement: 'bottom'
+  },
+  {
+    icon:'✅', title:'Day Checkboxes',
+    body:"Uncheck a day to mark a leave (PL, UL, SL, or Half Day). The choice is saved to your Attendance Calendar automatically.",
+    target: '#chk_mon', placement: 'right'
+  },
+  {
+    icon:'📊', title:"Today's Balance",
+    body:"This panel shows your real-time deficit against today's daily target — Production, Aux, Billing, and Utilization. Green = ahead, red = still needed.",
+    target: '#today_prod_bal', placement: 'left'
+  },
+  {
+    icon:'☁', title:'Sync & Refresh',
+    body:"SYNC pushes your local changes to the cloud. REFRESH pulls the latest from the cloud. Data also auto-saves 1.5s after any change.",
+    target: '#syncBtnD,#syncBtn', placement: 'bottom'
+  },
+  {
+    icon:'📅', title:'Attendance Calendar',
+    body:"Open the year-view calendar to see all your attendance at a glance. Tap any date to cycle leave types. Today is highlighted in gold.",
+    target: 'button[onclick="openAttendance()"]', placement: 'top'
+  },
+  {
+    icon:'🗄', title:'Database & Push',
+    body:"PUSH TO DB commits your finished week. DATABASE lets you browse, export PDFs, or add historical weeks.",
+    target: 'button[onclick="pushToDatabase()"],#dbTabBtnD,#dbTabBtn', placement: 'top'
+  },
+  {
+    icon:'⚙', title:'Settings',
+    body:"Change your shift (Morning/Evening/Night), targets, profile, email, or password. You can also delete your account here.",
+    target: 'button[onclick="openSettings()"]', placement: 'top'
+  },
+  {
+    icon:'🎉', title:"You're All Set!",
+    body:"That's the whole app. You can replay this tour anytime from Settings. Now go log some time.",
+    target: null, placement: 'center'
+  },
 ];
 
 let _tourStep = 0;
+let _tourReposHandler = null;
 
 function startTour() {
   _tourStep = 0;
-  _renderTourStep();
   document.getElementById('appTour').classList.add('active');
+  document.body.classList.add('tour-active');
+  _renderTourStep();
+  // Reposition on resize / scroll so the spotlight stays glued to the target.
+  _tourReposHandler = () => _renderTourStep(true);
+  window.addEventListener('resize', _tourReposHandler);
+  window.addEventListener('scroll', _tourReposHandler, true);
 }
 
-function _renderTourStep() {
+function _resolveTarget(sel) {
+  if (!sel) return null;
+  // Allow comma-separated fallbacks (e.g. desktop vs mobile id)
+  for (const part of sel.split(',')) {
+    const el = document.querySelector(part.trim());
+    if (el && el.offsetParent !== null) return el; // visible
+  }
+  // Last-resort: return the first match even if hidden — caller will fall back to centered.
+  return document.querySelector(sel.split(',')[0].trim());
+}
+
+function _layoutTourSpotlight(target, placement) {
+  const ring = document.getElementById('appTour-ring');
+  const arrow = document.getElementById('appTour-arrow');
+  const card = document.getElementById('appTour-card');
+  const mT = document.getElementById('tourMaskTop');
+  const mL = document.getElementById('tourMaskLeft');
+  const mR = document.getElementById('tourMaskRight');
+  const mB = document.getElementById('tourMaskBottom');
+  const vw = window.innerWidth, vh = window.innerHeight;
+
+  // Centered card (no target) — full overlay, hide ring & arrow.
+  if (!target || placement === 'center') {
+    ring.style.display = 'none';
+    arrow.style.display = 'none';
+    mT.style.cssText = `position:fixed;top:0;left:0;width:100vw;height:100vh;`;
+    mL.style.display = mR.style.display = mB.style.display = 'none';
+    // Re-apply class-based styles
+    mT.className = 'tour-mask';
+    // Center the card
+    card.style.left = '50%';
+    card.style.top = '50%';
+    card.style.transform = 'translate(-50%, -50%)';
+    card.style.bottom = '';
+    card.style.right = '';
+    return;
+  }
+
+  // Restore mask pieces
+  [mT, mL, mR, mB].forEach(m => m.style.display = '');
+
+  // Scroll target into view if needed
+  const rect0 = target.getBoundingClientRect();
+  if (rect0.top < 60 || rect0.bottom > vh - 60) {
+    target.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+  }
+  const rect = target.getBoundingClientRect();
+  const pad = 8;
+  const ringL = Math.max(0, rect.left - pad);
+  const ringT = Math.max(0, rect.top - pad);
+  const ringW = rect.width + pad * 2;
+  const ringH = rect.height + pad * 2;
+  const ringR = ringL + ringW;
+  const ringB = ringT + ringH;
+
+  // Ring
+  ring.style.display = 'block';
+  ring.style.left = ringL + 'px';
+  ring.style.top = ringT + 'px';
+  ring.style.width = ringW + 'px';
+  ring.style.height = ringH + 'px';
+
+  // 4 mask pieces forming a cutout around [ringL..ringR, ringT..ringB]
+  mT.style.cssText = `position:fixed;top:0;left:0;width:100vw;height:${ringT}px;`;
+  mB.style.cssText = `position:fixed;top:${ringB}px;left:0;width:100vw;height:${Math.max(0, vh - ringB)}px;`;
+  mL.style.cssText = `position:fixed;top:${ringT}px;left:0;width:${ringL}px;height:${ringH}px;`;
+  mR.style.cssText = `position:fixed;top:${ringT}px;left:${ringR}px;width:${Math.max(0, vw - ringR)}px;height:${ringH}px;`;
+  [mT, mL, mR, mB].forEach(m => m.classList.add('tour-mask'));
+
+  // Decide actual placement based on available room
+  const cardW = Math.min(320, vw - 32);
+  const cardH = card.offsetHeight || 220;
+  const gap = 18; // space between target and card (room for arrow)
+  let actual = placement;
+  if (actual === 'auto' || !actual) {
+    const spaceBelow = vh - ringB;
+    const spaceAbove = ringT;
+    actual = (spaceBelow >= cardH + gap || spaceBelow >= spaceAbove) ? 'bottom' : 'top';
+  }
+  if (actual === 'bottom' && (vh - ringB) < cardH + gap) actual = 'top';
+  if (actual === 'top' && ringT < cardH + gap) actual = 'bottom';
+
+  // Position card
+  let cardL, cardT;
+  card.style.transform = '';
+  if (actual === 'bottom') {
+    cardT = ringB + gap;
+    cardL = Math.min(Math.max(8, rect.left + rect.width/2 - cardW/2), vw - cardW - 8);
+  } else if (actual === 'top') {
+    cardT = ringT - gap - cardH;
+    cardL = Math.min(Math.max(8, rect.left + rect.width/2 - cardW/2), vw - cardW - 8);
+  } else if (actual === 'left') {
+    cardL = ringL - gap - cardW;
+    if (cardL < 8) { actual = 'right'; cardL = ringR + gap; }
+    cardT = Math.min(Math.max(8, rect.top + rect.height/2 - cardH/2), vh - cardH - 8);
+  } else if (actual === 'right') {
+    cardL = ringR + gap;
+    if (cardL + cardW > vw - 8) { actual = 'left'; cardL = ringL - gap - cardW; }
+    cardT = Math.min(Math.max(8, rect.top + rect.height/2 - cardH/2), vh - cardH - 8);
+  }
+  card.style.left = cardL + 'px';
+  card.style.top = cardT + 'px';
+  card.style.bottom = '';
+  card.style.right = '';
+
+  // Arrow (CSS triangle pointing from card to target)
+  arrow.style.display = 'block';
+  const arrowSize = 12;
+  const accent = '#ffd166';
+  if (actual === 'bottom') {
+    // Card below target → arrow points UP
+    arrow.style.left = (rect.left + rect.width/2 - arrowSize) + 'px';
+    arrow.style.top = (ringB + gap - arrowSize) + 'px';
+    arrow.style.borderLeft = arrowSize + 'px solid transparent';
+    arrow.style.borderRight = arrowSize + 'px solid transparent';
+    arrow.style.borderBottom = arrowSize + 'px solid ' + accent;
+    arrow.style.borderTop = '';
+  } else if (actual === 'top') {
+    arrow.style.left = (rect.left + rect.width/2 - arrowSize) + 'px';
+    arrow.style.top = (ringT - gap) + 'px';
+    arrow.style.borderLeft = arrowSize + 'px solid transparent';
+    arrow.style.borderRight = arrowSize + 'px solid transparent';
+    arrow.style.borderTop = arrowSize + 'px solid ' + accent;
+    arrow.style.borderBottom = '';
+  } else if (actual === 'right') {
+    arrow.style.left = (ringR + gap - arrowSize) + 'px';
+    arrow.style.top = (rect.top + rect.height/2 - arrowSize) + 'px';
+    arrow.style.borderTop = arrowSize + 'px solid transparent';
+    arrow.style.borderBottom = arrowSize + 'px solid transparent';
+    arrow.style.borderRight = arrowSize + 'px solid ' + accent;
+    arrow.style.borderLeft = '';
+  } else { // left
+    arrow.style.left = (ringL - gap) + 'px';
+    arrow.style.top = (rect.top + rect.height/2 - arrowSize) + 'px';
+    arrow.style.borderTop = arrowSize + 'px solid transparent';
+    arrow.style.borderBottom = arrowSize + 'px solid transparent';
+    arrow.style.borderLeft = arrowSize + 'px solid ' + accent;
+    arrow.style.borderRight = '';
+  }
+}
+
+function _renderTourStep(isReposition) {
   const s = TOUR_STEPS[_tourStep];
   const total = TOUR_STEPS.length;
   document.getElementById('appTour-step').textContent = `Step ${_tourStep+1} of ${total}`;
@@ -3579,10 +3799,20 @@ function _renderTourStep() {
   document.getElementById('appTour-body').textContent = s.body;
   // Dots
   const dots = document.getElementById('tourDots');
-  dots.innerHTML = TOUR_STEPS.map((_,i)=>`<div class="tour-dot${i===_tourStep?' active':''}"></div>`).join('');
-  // Button label
+  dots.innerHTML = TOUR_STEPS.map((_,i) => {
+    const cls = i === _tourStep ? 'active' : (i < _tourStep ? 'done' : '');
+    return `<div class="tour-dot ${cls}"></div>`;
+  }).join('');
+  // Button labels
   const nextBtn = document.querySelector('.tour-btn-next');
   if (nextBtn) nextBtn.textContent = _tourStep === total-1 ? "✓ Let's Go!" : 'Next →';
+  const backBtn = document.getElementById('tourBackBtn');
+  if (backBtn) backBtn.style.display = _tourStep > 0 ? '' : 'none';
+
+  // Spotlight + arrow
+  const target = _resolveTarget(s.target);
+  // Defer to next frame so the card has its final size for measurement.
+  requestAnimationFrame(() => _layoutTourSpotlight(target, s.placement || 'auto'));
 }
 
 function tourNext() {
@@ -3594,9 +3824,30 @@ function tourNext() {
   }
 }
 
+function tourPrev() {
+  if (_tourStep > 0) {
+    _tourStep--;
+    _renderTourStep();
+  }
+}
+
 function tourSkip() {
   document.getElementById('appTour').classList.remove('active');
+  document.body.classList.remove('tour-active');
   localStorage.setItem('tourDone', '1');
+  if (_tourReposHandler) {
+    window.removeEventListener('resize', _tourReposHandler);
+    window.removeEventListener('scroll', _tourReposHandler, true);
+    _tourReposHandler = null;
+  }
+}
+
+// Allow users to replay the tour later (used from Settings).
+function replayTour() {
+  localStorage.removeItem('tourDone');
+  // Close settings if open
+  document.getElementById('settingsModal')?.classList?.remove('open');
+  setTimeout(startTour, 250);
 }
 // ════════════════════════════════════════
 function saveOnboarding() {
@@ -5952,17 +6203,24 @@ function authSignOut() {
 </div>
 
 
-<!-- ===== APP TOUR ===== -->
+<!-- ===== APP TOUR (guided spotlight) ===== -->
 <div id="appTour">
-  <div id="appTour-overlay" onclick="tourSkip()"></div>
-  <div id="appTour-card">
-    <div id="appTour-step">Step 1 of 8</div>
+  <!-- 4-piece dim mask. Each is positioned around the target leaving a hole. -->
+  <div class="tour-mask" id="tourMaskTop"    onclick="tourSkip()"></div>
+  <div class="tour-mask" id="tourMaskLeft"   onclick="tourSkip()"></div>
+  <div class="tour-mask" id="tourMaskRight"  onclick="tourSkip()"></div>
+  <div class="tour-mask" id="tourMaskBottom" onclick="tourSkip()"></div>
+  <div id="appTour-ring"></div>
+  <div id="appTour-arrow"></div>
+  <div id="appTour-card" role="dialog" aria-labelledby="appTour-title">
+    <div id="appTour-step">Step 1 of 10</div>
     <span id="appTour-icon">👋</span>
     <div id="appTour-title">Welcome to WorkPlace</div>
     <div class="tour-progress" id="tourDots"></div>
-    <div id="appTour-body">Let's take a quick tour of the app so you know where everything is.</div>
+    <div id="appTour-body">Let's take a quick tour so you know where everything is.</div>
     <div class="tour-btn-row">
-      <button class="tour-btn tour-btn-skip" onclick="tourSkip()">Skip Tour</button>
+      <button class="tour-btn tour-btn-skip" onclick="tourSkip()">Skip</button>
+      <button class="tour-btn tour-btn-back" onclick="tourPrev()" id="tourBackBtn" style="display:none;">← Back</button>
       <button class="tour-btn tour-btn-next" onclick="tourNext()">Next →</button>
     </div>
   </div>
@@ -5980,6 +6238,10 @@ function authSignOut() {
       <button id="set-shift-night" onclick="settingsSaveShift('night')" class="auth-btn secondary" style="flex:1;min-width:90px;padding:10px 4px;">🌑 Night<br><span style="font-size:8px;font-weight:400;opacity:0.8;">9:00 PM – 6:30 AM</span></button>
     </div>
     <div class="settings-save" id="set-shift-msg"></div>
+
+    <div class="settings-section">Help</div>
+    <p style="font-size:9px;color:#888;margin-bottom:8px;">Forgot where something is? Replay the guided spotlight tour any time.</p>
+    <button class="auth-btn secondary" onclick="replayTour()" style="width:100%;">🎯 REPLAY APP TOUR</button>
 
     <div class="settings-section">Profile</div>
     <div class="auth-field"><label>Display Name</label><input type="text" id="set-name" placeholder="Full name"></div>
