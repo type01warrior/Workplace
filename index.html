@@ -1413,6 +1413,26 @@ body.dark tr.row-disabled td.input-cell input { background: #141414 !important; 
 body.dark tr.row-disabled td { color: #3a3a3a !important; }
 tr.row-disabled td.input-cell input[type="checkbox"] { pointer-events: auto !important; cursor: pointer !important; }
 
+/* ===== ACTIVE SHIFT ROW HIGHLIGHT =====
+   Applied to the day row corresponding to the active Start-Shift workday.
+   Stays on that row across midnight until End Shift is clicked. */
+@keyframes activeShiftPulse {
+  0%, 100% { box-shadow: inset 0 0 0 2px #e74c3c, 0 0 0 0 rgba(231,76,60,0.45); }
+  50%      { box-shadow: inset 0 0 0 2px #e74c3c, 0 0 0 4px rgba(231,76,60,0.15); }
+}
+tr.row-active-shift td { background: rgba(231, 76, 60, 0.06) !important; }
+tr.row-active-shift td.left { color: #e74c3c !important; font-weight: 700 !important; }
+tr.row-active-shift td:first-child {
+  box-shadow: inset 4px 0 0 0 #e74c3c;
+}
+tr.row-active-shift {
+  outline: 2px solid #e74c3c;
+  outline-offset: -2px;
+  animation: activeShiftPulse 2.4s ease-in-out infinite;
+}
+body.dark tr.row-active-shift td { background: rgba(231, 76, 60, 0.12) !important; }
+body.dark tr.row-active-shift td.left { color: #ff7669 !important; }
+
 /* ===== DATABASE MODAL ===== */
 #dbModal {
   display: none; position: fixed; inset: 0;
@@ -2739,9 +2759,31 @@ function _cancelLeavePicker(day) {
   recalc();
 }
 
+// Highlight the row corresponding to the active Start-Shift workday.
+// When no session is active, all highlights are cleared.
+function updateActiveShiftRow() {
+  const DAYS_LOCAL = ['sun','mon','tue','wed','thu'];
+  const NAMES = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY'];
+  let activeKey = null;
+  try {
+    const session = (typeof _activeShiftSession === 'function') ? _activeShiftSession() : null;
+    if (session) {
+      const name = getTodayDayName();
+      const idx = NAMES.indexOf(name);
+      if (idx >= 0) activeKey = DAYS_LOCAL[idx];
+    }
+  } catch(e) {}
+  DAYS_LOCAL.forEach(d => {
+    const row = document.getElementById('row_' + d);
+    if (!row) return;
+    row.classList.toggle('row-active-shift', d === activeKey);
+  });
+}
+
 function recalc() {
   autoCalcDaysLeft();
   updateRowDisabledState();
+  updateActiveShiftRow();
   const weekLabel = getWeekLabel();
   const todayName = getTodayDayName();
   const wdayNum = getWorkingDayNum();
