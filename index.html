@@ -3651,12 +3651,23 @@ function startTour() {
 
 function _resolveTarget(sel) {
   if (!sel) return null;
-  // Allow comma-separated fallbacks (e.g. desktop vs mobile id)
+  // Helper: is the element actually rendered (size > 0 and not display:none)?
+  const isVisible = (el) => {
+    if (!el) return false;
+    if (el.offsetParent === null) return false; // display:none ancestor
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  };
+  // For each comma-separated selector part, scan ALL matches and pick first visible.
+  // This handles the common pattern where the same onclick is on both a mobile-grid
+  // button (hidden on desktop) and a desktop button (hidden on mobile).
   for (const part of sel.split(',')) {
-    const el = document.querySelector(part.trim());
-    if (el && el.offsetParent !== null) return el; // visible
+    const list = document.querySelectorAll(part.trim());
+    for (const el of list) {
+      if (isVisible(el)) return el;
+    }
   }
-  // Last-resort: return the first match even if hidden — caller will fall back to centered.
+  // Last resort: return first match even if hidden (renderer will still try to anchor).
   return document.querySelector(sel.split(',')[0].trim());
 }
 
@@ -3670,8 +3681,10 @@ function _layoutTourSpotlight(target, placement) {
   const mB = document.getElementById('tourMaskBottom');
   const vw = window.innerWidth, vh = window.innerHeight;
 
-  // Centered card (no target) — full overlay, hide ring & arrow.
-  if (!target || placement === 'center') {
+  // If target is missing OR not visibly rendered, fall back to centered card.
+  const targetRect = target ? target.getBoundingClientRect() : null;
+  const targetVisible = !!(targetRect && targetRect.width > 0 && targetRect.height > 0 && target.offsetParent !== null);
+  if (!target || !targetVisible || placement === 'center') {
     ring.style.display = 'none';
     arrow.style.display = 'none';
     mT.style.cssText = `position:fixed;top:0;left:0;width:100vw;height:100vh;`;
