@@ -1437,24 +1437,40 @@ body.dark tr.row-disabled td { color: #3a3a3a !important; }
 tr.row-disabled td.input-cell input[type="checkbox"] { pointer-events: auto !important; cursor: pointer !important; }
 
 /* ===== ACTIVE SHIFT ROW HIGHLIGHT =====
-   Applied to the day row corresponding to the active Start-Shift workday.
-   Stays on that row across midnight until End Shift is clicked. */
-@keyframes activeShiftPulse {
-  0%, 100% { box-shadow: inset 0 0 0 2px #e74c3c, 0 0 0 0 rgba(231,76,60,0.45); }
-  50%      { box-shadow: inset 0 0 0 2px #e74c3c, 0 0 0 4px rgba(231,76,60,0.15); }
+   Subtle navy-blue Material-style accent applied to the day row of the
+   active Start-Shift workday. Stays on that row across midnight until
+   End Shift is clicked. No animation — clean, minimal, professional. */
+tr.row-active-shift td {
+  background: rgba(28, 43, 58, 0.04) !important;
 }
-tr.row-active-shift td { background: rgba(231, 76, 60, 0.06) !important; }
-tr.row-active-shift td.left { color: #e74c3c !important; font-weight: 700 !important; }
+tr.row-active-shift td.left {
+  color: #1C2B3A !important;
+  font-weight: 700 !important;
+}
+/* Thin 2px navy accent on the LEFT edge of the first cell — the only visual cue.
+   `position:relative` + ::after gives a crisp, anti-aliasing-free line that
+   sits inside the row without disturbing borders. */
 tr.row-active-shift td:first-child {
-  box-shadow: inset 4px 0 0 0 #e74c3c;
+  position: relative;
+  box-shadow: inset 2px 0 0 0 #1C2B3A;
 }
+/* Subtle 1px outline tying the whole row together — looks like a Material card */
 tr.row-active-shift {
-  outline: 2px solid #e74c3c;
-  outline-offset: -2px;
-  animation: activeShiftPulse 2.4s ease-in-out infinite;
+  outline: 1px solid rgba(28, 43, 58, 0.35);
+  outline-offset: -1px;
 }
-body.dark tr.row-active-shift td { background: rgba(231, 76, 60, 0.12) !important; }
-body.dark tr.row-active-shift td.left { color: #ff7669 !important; }
+body.dark tr.row-active-shift td {
+  background: rgba(122, 178, 211, 0.06) !important;
+}
+body.dark tr.row-active-shift td.left {
+  color: #7ab2d3 !important;
+}
+body.dark tr.row-active-shift td:first-child {
+  box-shadow: inset 2px 0 0 0 #7ab2d3;
+}
+body.dark tr.row-active-shift {
+  outline: 1px solid rgba(122, 178, 211, 0.3);
+}
 
 /* ===== DATABASE MODAL ===== */
 #dbModal {
@@ -1562,28 +1578,33 @@ body.dark .me-table .me-readonly { color:#cfe6ff; }
 .me-status-cell { display:flex; gap:3px; align-items:center; justify-content:center; flex-wrap:wrap; }
 .me-table input[type="checkbox"].me-toggle { width:34px !important; height:19px !important; }
 
-/* ===== ATTENDANCE MODAL ===== */
+/* ===== ATTENDANCE MODAL — FULL SCREEN ===== */
 #attendanceModal {
   display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.55); z-index: 8500;
-  align-items: flex-start; justify-content: center;
-  padding: max(56px, env(safe-area-inset-top, 56px)) 4px 20px;
+  background: #fff;             /* solid, fills the entire viewport */
+  z-index: 9000;
   font-family: 'Lexend', sans-serif;
-  overflow-y: auto; overflow-x: hidden;
+  overflow: hidden;             /* card handles internal scroll */
   box-sizing: border-box;
+  padding: 0;
 }
-@media screen and (min-width:769px) {
-  #attendanceModal { padding: 8px 4px 20px; }
-}
-#attendanceModal.open { display: flex; }
+body.dark #attendanceModal { background: #0e1115; }
+#attendanceModal.open { display: flex; flex-direction: column; }
 .att-card {
-  background: #fff; border: 1px solid #1C2B3A;
-  box-shadow: 4px 4px 0 #1C2B3A; border-radius: 8px;
-  padding: 10px 4px; width: 100%; max-width: 100%;
-  box-sizing: border-box; overflow: visible;
-  margin-bottom: 20px;
+  background: #fff;
+  border: none; box-shadow: none; border-radius: 0;
+  padding: 14px 16px 20px;
+  width: 100%; height: 100%; max-width: 100%; max-height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;            /* scroll inside the card */
+  overflow-x: auto;
+  margin: 0;
+  display: flex; flex-direction: column;
 }
-body.dark .att-card { background: #1a1a1a; border-color: #333; box-shadow: 4px 4px 0 #000; }
+body.dark .att-card { background: #0e1115; }
+@media screen and (max-width:768px) {
+  .att-card { padding: 10px 8px 16px; }
+}
 .att-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .att-header h4 { font-size: 13px; font-weight: 700; color: #1C2B3A; }
 body.dark .att-header h4 { color: #e8e8e8; }
@@ -2456,10 +2477,13 @@ function getTodayDayName() {
     const t = (typeof SHIFT_TIMINGS !== 'undefined') ? SHIFT_TIMINGS[shift] : null;
     if (t && t.endCrossesMidnight) {
       const mins = now.getHours() * 60 + now.getMinutes();
-      const extending = (typeof _shiftExtending === 'function') && _shiftExtending();
-      // If current time is between 0 and shift-end (inclusive of extend grace),
-      // the working day is yesterday. `extending` keeps it yesterday past shift end.
-      if (mins < t.endMin || extending) {
+      // The working day for a cross-midnight shift rolls over at the NEXT
+      // shift's START time (e.g. 4 PM for Evening, 9 PM for Night). Any moment
+      // before that on the calendar day still belongs to yesterday's shift.
+      // This keeps balances stable from shift-start through past midnight
+      // until the user reaches the natural next shift start — matching what a
+      // shift worker intuitively considers "today".
+      if (mins < t.startMin) {
         dayIdx = (dayIdx + 6) % 7; // rollback 1 day
       }
     }
@@ -3301,10 +3325,12 @@ function _shiftWorkDayKey(now = new Date()) {
   if (session && session.workDayKey) return session.workDayKey;
   const t = getShiftTiming(_userShift);
   const d = new Date(now);
-  // If we're past midnight in a cross-midnight shift, the working day is yesterday.
+  // Working day for a cross-midnight shift = the calendar day the shift STARTED on.
+  // Roll back if current time is before the next shift start (e.g. before 4 PM
+  // for Evening, before 9 PM for Night). Matches getTodayDayName().
   if (t.endCrossesMidnight) {
     const mins = now.getHours() * 60 + now.getMinutes();
-    if (mins < t.endMin) d.setDate(d.getDate() - 1);
+    if (mins < t.startMin) d.setDate(d.getDate() - 1);
   }
   const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${dd}`;
@@ -3335,9 +3361,6 @@ let _shiftPopupShownFor = null; // tracks workDayKey the popup was shown for in 
 // Called every minute from the recalc interval — shows the Extending popup
 // once the scheduled shift end is reached (only for cross-midnight shifts).
 function checkShiftEndPopup() {
-  // If the user is using the explicit Start/End Shift flow, suppress the
-  // auto popup — they control the lifecycle manually now.
-  if (_activeShiftSession()) return;
   const t = getShiftTiming(_userShift);
   if (!t.endCrossesMidnight) return; // morning shift ends same day — no popup
   const now = new Date();
@@ -3362,18 +3385,22 @@ function showShiftEndPopup() {
   const t = getShiftTiming(_userShift);
   const endH = Math.floor(t.endMin/60), endM = t.endMin%60;
   const endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
+  const session = _activeShiftSession();
+  const bodyMsg = session
+    ? `Your scheduled end time (${endStr}) has been reached.<br>Working day <strong>${session.workDayKey}</strong> is still locked. Continue working on this shift?`
+    : `Your scheduled end time (${endStr}) has been reached. Are you extending your shift?`;
   const popup = document.createElement('div');
   popup.id = 'shiftEndPopup';
   popup.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:${bg};border:2px solid ${border};border-radius:12px;padding:22px 26px;z-index:99999;min-width:300px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,0.35);font-family:Lexend,sans-serif;`;
   popup.innerHTML = `
     <div style="font-size:12px;font-weight:700;color:${txt};margin-bottom:6px;">${t.icon} ${t.label} Shift Ending</div>
-    <div style="font-size:10px;color:#888;margin-bottom:16px;line-height:1.5;">Your scheduled end time (${endStr}) has been reached. Are you extending your shift?</div>
+    <div style="font-size:10px;color:#888;margin-bottom:16px;line-height:1.5;">${bodyMsg}</div>
     <div style="display:flex;gap:8px;">
       <button onclick="decideShiftEnd('extend')" style="flex:1;padding:12px 6px;font-family:Lexend,sans-serif;font-size:11px;font-weight:700;background:#27ae6022;color:#27ae60;border:2px solid #27ae60;border-radius:8px;cursor:pointer;line-height:1.3;">
-        ✓ YES — EXTENDING<br><span style="font-size:8px;font-weight:400;opacity:0.85;">Keep logging to current working day</span>
+        ✓ YES — KEEP WORKING<br><span style="font-size:8px;font-weight:400;opacity:0.85;">Same working day stays locked</span>
       </button>
       <button onclick="decideShiftEnd('close')" style="flex:1;padding:12px 6px;font-family:Lexend,sans-serif;font-size:11px;font-weight:700;background:#e74c3c22;color:#e74c3c;border:2px solid #e74c3c;border-radius:8px;cursor:pointer;line-height:1.3;">
-        ✕ NO — CLOSE SHIFT<br><span style="font-size:8px;font-weight:400;opacity:0.85;">Finalize & move to next day</span>
+        ✕ NO — END SHIFT<br><span style="font-size:8px;font-weight:400;opacity:0.85;">Finalize &amp; show summary</span>
       </button>
     </div>`;
   document.body.appendChild(popup);
@@ -3383,8 +3410,29 @@ function decideShiftEnd(decision) {
   const wk = _shiftWorkDayKey();
   _writeShiftCloseState({ workDayKey: wk, decision });
   document.getElementById('shiftEndPopup')?.remove();
+  // If an explicit Start-Shift session is running, the popup's "Close Shift"
+  // choice should finalize that session (and surface the elapsed-time summary).
+  // "Extend" simply leaves the session alone — the workDayKey is already locked.
+  if (decision === 'close' && _activeShiftSession()) {
+    endShiftSilent();
+  }
   recalc();
   if (window.saveUserData) window.saveUserData();
+}
+
+// Same as endShift() but without the confirm() — used after the user has
+// already chosen "Close" in the shift-end popup.
+function endShiftSilent() {
+  const session = _activeShiftSession();
+  if (!session) return;
+  const endMs = Date.now();
+  const elapsedMins = Math.max(0, Math.floor((endMs - session.startMs) / 60000));
+  const hh = Math.floor(elapsedMins / 60);
+  const mm = elapsedMins % 60;
+  _writeShiftSession(null);
+  _renderShiftButton();
+  recalc();
+  showShiftSummaryPopup(session, endMs, hh, mm);
 }
 
 // Manual "Close Shift" button — available from header
