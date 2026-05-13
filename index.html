@@ -1580,32 +1580,42 @@ body.dark .me-table .me-readonly { color:#cfe6ff; }
 
 /* ===== ATTENDANCE MODAL — FULL SCREEN ===== */
 #attendanceModal {
-  display: none; position: fixed; inset: 0;
-  background: #fff;             /* solid, fills the entire viewport */
+  display: none;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  width: 100vw; height: 100vh; height: 100dvh;
+  background: #fff;
   z-index: 9000;
   font-family: 'Lexend', sans-serif;
-  overflow: hidden;             /* card handles internal scroll */
+  overflow: hidden;
   box-sizing: border-box;
-  padding: 0;
+  padding: 0; margin: 0;
 }
 body.dark #attendanceModal { background: #0e1115; }
-#attendanceModal.open { display: flex; flex-direction: column; }
+#attendanceModal.open {
+  display: flex !important;
+  flex-direction: column;
+  width: 100vw; height: 100vh; height: 100dvh;
+}
 .att-card {
   background: #fff;
   border: none; box-shadow: none; border-radius: 0;
-  padding: 14px 16px 20px;
-  width: 100%; height: 100%; max-width: 100%; max-height: 100%;
+  padding: 0;                    /* edge-to-edge: no card padding */
+  width: 100%;
+  flex: 1 1 0;                   /* fills the flex column */
+  min-height: 0;                 /* allow inner overflow to work */
+  max-width: 100%;
   box-sizing: border-box;
-  overflow-y: auto;            /* scroll inside the card */
-  overflow-x: auto;
+  overflow: hidden;              /* inner wrap scrolls, card itself fixed */
   margin: 0;
   display: flex; flex-direction: column;
 }
 body.dark .att-card { background: #0e1115; }
-@media screen and (max-width:768px) {
-  .att-card { padding: 10px 8px 16px; }
+.att-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 0;
+  padding: 8px 16px;             /* header is the only thing with side padding */
+  flex: 0 0 auto;                /* fixed-height header inside card */
 }
-.att-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .att-header h4 { font-size: 13px; font-weight: 700; color: #1C2B3A; }
 body.dark .att-header h4 { color: #e8e8e8; }
 .att-year-nav { display: flex; align-items: center; gap: 10px; }
@@ -1613,32 +1623,98 @@ body.dark .att-header h4 { color: #e8e8e8; }
 .att-year-label { font-size: 15px; font-weight: 700; color: #1C2B3A; min-width: 50px; text-align: center; }
 body.dark .att-year-label { color: #e8e8e8; }
 .att-calendar-wrap {
-  overflow-x: auto;
-  overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
-  transform-origin: top left;
-  display: block;
+  flex: 1 1 auto;
+  width: 100vw;
+  height: 100%;
+  overflow: hidden;            /* full-screen layout — no scrolling needed */
+  display: flex;
+  font-family: 'Lexend', sans-serif;
 }
-.att-cell.att-today { outline: 2px solid #E8B400 !important; outline-offset: -2px; font-weight: 900 !important; color: #E8B400 !important; }
+@media screen and (max-width:768px) {
+  .att-calendar-wrap { overflow: auto; }
+}
+.att-cell.att-today { outline: 3px solid #E8B400 !important; outline-offset: -3px; font-weight: 900 !important; color: #E8B400 !important; }
 .att-month-label.att-today-month { background: #E8B400 !important; color: #1C2B3A !important; }
-.att-calendar { border-collapse: collapse; font-size: 8px; font-weight: 700; font-family: 'Lexend', sans-serif; }
-.att-calendar th, .att-calendar td { border: 1px solid #B0BCC8; padding: 0; text-align: center; white-space: nowrap; min-width: 12px; width: 12px; height: 14px; line-height: 1; font-size: 6px; }
-body.dark .att-calendar th, body.dark .att-calendar td { border-color: #3a3a3a; }
-.att-calendar thead th { background: #1C2B3A; color: #E8F0F8; font-size: 6px; padding: 1px 0; }
+
+/* ── 32-column edge-to-edge year planner ──
+   1 month-label column + 31 day columns. table-layout:fixed + width:100%
+   distributes the 31 day columns equally across the viewport. */
+.att-calendar {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%; height: 100%;
+  font-family: 'Lexend', sans-serif;
+  font-weight: 700;
+}
+.att-calendar th, .att-calendar td {
+  border: 1px solid #B0BCC8;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  font-family: 'Lexend', sans-serif;
+}
+body.dark .att-calendar th, body.dark .att-calendar td { border-color: #2a3340; }
+.att-calendar thead th {
+  background: #1C2B3A; color: #E8F0F8;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+}
+.att-calendar th.year-header {
+  background: #1C2B3A; color: #E8F0F8;
+  font-size: 14px; font-weight: 900; letter-spacing: 3px;
+  padding: 6px 0;
+}
+.att-month-label {
+  background: #2E4A62 !important;
+  color: #E8F0F8 !important;
+  font-family: 'Lexend', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  text-align: left !important;
+  padding: 0 14px !important;
+  width: 8%;                  /* month label column ~8% of viewport */
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+body.dark .att-month-label { background: #1a3a5c !important; }
+.att-cell {
+  cursor: pointer;
+  background: #EAF1F8;
+  transition: background 0.15s;
+  font-size: 13px;
+  font-weight: 700;
+  position: relative;
+}
+/* Weekend header (SAT/SUN) gets a softer tint to stand out */
+.att-calendar thead th.att-weekend-th { background: #2a3a4a; color: #ffd9d3; }
+body.dark .att-calendar thead th.att-weekend-th { background: #261820; color: #ff8a7a; }
+/* FRI column gets a thicker right divider so weeks are visually grouped */
 .att-calendar th.week-end-th, .att-calendar td.week-end { border-right: 2px solid #1C2B3A !important; }
 body.dark .att-calendar th.week-end-th, body.dark .att-calendar td.week-end { border-right: 2px solid #6699bb !important; }
-.att-calendar th.year-header { background: #1C2B3A; color: #E8F0F8; font-size: 9px; font-weight: 700; padding: 3px; letter-spacing: 1px; }
-.att-month-label { background: #2E4A62 !important; color: #E8F0F8 !important; font-size: 6.5px !important; text-align: left !important; padding-left: 2px !important; min-width: 36px !important; width: 36px !important; font-weight: 700 !important; }
-body.dark .att-month-label { background: #1a3a5c !important; }
-.att-cell { cursor: pointer; background: #EAF1F8; transition: background 0.15s; font-size: 6.5px; }
-body.dark .att-cell { background: #222; color: #e8e8e8; }
+.att-cell.att-weekend { background: rgba(28, 43, 58, 0.08); }
+body.dark .att-cell.att-weekend { background: rgba(255, 255, 255, 0.04); }
+body.dark .att-cell { background: #1a2230; color: #e8e8e8; }
 .att-cell:hover { background: #c8dff5 !important; }
 body.dark .att-cell:hover { background: #1a3a5c !important; }
 .att-cell.empty { background: #D6E4F0 !important; cursor: default; color: transparent; }
-body.dark .att-cell.empty { background: #111 !important; }
+body.dark .att-cell.empty { background: #0e1620 !important; }
+
+/* Desktop full-screen sizing — rows divide the viewport equally.
+   Table has 14 rows total (year-header + day-header + 12 months). */
+@media screen and (min-width:769px) {
+  .att-calendar tr { height: calc((100vh - 46px) / 14); }
+  .att-calendar th, .att-calendar td {
+    height: calc((100vh - 46px) / 14);
+    font-size: 14px;
+  }
+  .att-calendar thead th { font-size: 12px; }
+  .att-calendar th.year-header { font-size: 16px; letter-spacing: 4px; }
+  .att-month-label { font-size: 14px !important; }
+  .att-cell { font-size: 14px; }
+}
 /* Alternating month row backgrounds */
-.att-row-odd .att-cell:not(.att-WO):not(.att-PL):not(.att-HL):not(.att-UL):not(.att-SL) { background: #EAF1F8; }
-.att-row-even .att-cell:not(.att-WO):not(.att-PL):not(.att-HL):not(.att-UL):not(.att-SL) { background: #D0E4F5; }
+.att-row-odd .att-cell:not(.att-WO):not(.att-PL):not(.att-HL):not(.att-UL):not(.att-SL):not(.att-weekend) { background: #EAF1F8; }
+.att-row-even .att-cell:not(.att-WO):not(.att-PL):not(.att-HL):not(.att-UL):not(.att-SL):not(.att-weekend) { background: #D0E4F5; }
 .att-row-odd .att-cell.empty { background: #E0EBF5 !important; }
 .att-row-even .att-cell.empty { background: #C4D8EC !important; }
 body.dark .att-row-odd .att-cell:not(.att-WO):not(.att-PL):not(.att-HL):not(.att-UL):not(.att-SL) { background: #1e2a38; }
@@ -4860,103 +4936,73 @@ function renderAttCalendar() {
   const todayDay = _todayD.getDate();
   const todayKey = `${todayYear}-${String(todayMonth+1).padStart(2,'0')}-${String(todayDay).padStart(2,'0')}`;
 
-  // SAT=0, SUN=1, MON=2, TUE=3, WED=4, THU=5, FRI=6
+  // Week starts on SATURDAY (col 0) — matches the company's working week.
+  // Columns repeat SAT,SUN,MON,TUE,WED,THU,FRI across the row. Each month
+  // row uses up to ~37 columns (max startPos 6 + max daysInMonth 31).
   const WEEK_DAYS = ['SAT','SUN','MON','TUE','WED','THU','FRI'];
-
-  // Calculate exact columns needed: furthest column any month reaches
   const JS_TO_POS = {6:0, 0:1, 1:2, 2:3, 3:4, 4:5, 5:6};
+
+  // Compute the maximum last-column used by any month so the table is
+  // exactly as wide as required (no trailing dead columns).
   let maxLastCol = 0;
   for (let m = 0; m < 12; m++) {
     const days = new Date(attYear, m + 1, 0).getDate();
     const startPos = JS_TO_POS[new Date(attYear, m, 1).getDay()];
-    const lastCol = startPos + days; // last used column index (exclusive)
-    if (lastCol > maxLastCol) maxLastCol = lastCol;
+    if (startPos + days > maxLastCol) maxLastCol = startPos + days;
   }
-  const TOTAL_COLS = maxLastCol;
-  const NUM_WEEKS = Math.ceil(TOTAL_COLS / 7);
+  const TOTAL_COLS = maxLastCol;          // typically 35-38
 
   // ── YEAR HEADER ──
   let html = '<thead>';
   html += `<tr>`;
   html += `<th class="att-month-label" style="background:#1C2B3A!important;"></th>`;
-  html += `<th colspan="${TOTAL_COLS}" style="background:#1C2B3A;color:#E8F0F8;font-size:13px;font-weight:900;letter-spacing:3px;padding:5px;text-align:center;">${attYear}</th>`;
+  html += `<th colspan="${TOTAL_COLS}" class="year-header">${attYear}</th>`;
   html += `</tr>`;
 
-  // ── WEEK-DAY HEADER ──
+  // ── WEEKDAY HEADER (SAT..FRI repeating) ──
   html += `<tr>`;
-  html += `<th class="att-month-label" style="font-size:8px;text-align:center!important;padding-left:0!important;">MONTH/DAY</th>`;
+  html += `<th class="att-month-label" style="font-size:10px;text-align:center!important;padding:0!important;">MONTH/DAY</th>`;
   for (let i = 0; i < TOTAL_COLS; i++) {
-    const d = i % 7;
-    const isLast = d === 6;
-    html += `<th${isLast ? ' class="week-end-th"' : ''}>${WEEK_DAYS[d]}</th>`;
+    const dowIdx = i % 7;                 // 0=SAT..6=FRI
+    const isLast = (dowIdx === 6);        // FRI = last column of each week — gets divider
+    const dayName = WEEK_DAYS[dowIdx];
+    const isWE = (dayName === 'SAT' || dayName === 'SUN');
+    html += `<th class="${isLast ? 'week-end-th ' : ''}${isWE ? 'att-weekend-th' : ''}">${dayName}</th>`;
   }
   html += `</tr></thead><tbody>`;
 
   // ── MONTH ROWS ──
   for (let m = 0; m < 12; m++) {
     const daysInMonth = new Date(attYear, m + 1, 0).getDate();
-    const firstJsDay = new Date(attYear, m, 1).getDay();
-    const startPos = JS_TO_POS[firstJsDay];
-
+    const startPos = JS_TO_POS[new Date(attYear, m, 1).getDay()];
     const rowClass = m % 2 === 0 ? 'att-row-odd' : 'att-row-even';
     const isThisMonth = (attYear === todayYear && m === todayMonth);
     html += `<tr class="${rowClass}"><td class="att-month-label${isThisMonth ? ' att-today-month' : ''}">${ATT_MONTHS[m]}</td>`;
 
-    let col = 0;
     let dayNum = 1;
-
     for (let i = 0; i < TOTAL_COLS; i++) {
-      const isLast = (i % 7) === 6;
+      const dowIdx = i % 7;
+      const isLast = (dowIdx === 6);
       const weClass = isLast ? ' week-end' : '';
 
       if (i < startPos || dayNum > daysInMonth) {
-        // Empty slot
         html += `<td class="att-cell empty${weClass}"></td>`;
-      } else {
-        const d = dayNum;
-        const key = `${attYear}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const leave = attData[key];
-        const isToday = (key === todayKey);
-        const cls = `att-cell${leave ? ' att-'+leave : ''}${weClass}${isToday ? ' att-today' : ''}`;
-        html += `<td class="${cls}" data-key="${key}" onclick="attCellClick(event,this)" title="${key}">${leave || d}</td>`;
-        dayNum++;
+        continue;
       }
+      const isWeekend = (dowIdx === 0 || dowIdx === 1); // SAT or SUN
+      const key = `${attYear}-${String(m+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+      const leave = attData[key];
+      const isToday = (key === todayKey);
+      const cls = `att-cell${leave ? ' att-'+leave : ''}${isWeekend ? ' att-weekend' : ''}${weClass}${isToday ? ' att-today' : ''}`;
+      html += `<td class="${cls}" data-key="${key}" onclick="attCellClick(event,this)" title="${key}">${leave || dayNum}</td>`;
+      dayNum++;
     }
     html += `</tr>`;
   }
 
   html += `</tbody>`;
   table.innerHTML = html;
-  // Scale on desktop, scroll on mobile
-  requestAnimationFrame(() => {
-    const wrap = document.querySelector('.att-calendar-wrap');
-    const card = document.querySelector('.att-card');
-    if (!wrap || !card) return;
-    wrap.style.transform = '';
-    wrap.parentElement.style.height = '';
-    const isMobile = window.innerWidth <= 768;
-    if (isMobile) {
-      // Mobile: natural horizontal scroll, no scaling
-      wrap.style.overflowX = 'auto';
-      wrap.style.transform = 'none';
-    } else {
-      // Desktop: scale to fit perfectly
-      wrap.style.overflowX = 'visible';
-      const tableW = table.offsetWidth;
-      const cardW = card.clientWidth - 12;
-      if (tableW > cardW && tableW > 0) {
-        const scale = Math.max(0.25, cardW / tableW);
-        wrap.style.transform = `scale(${scale})`;
-        wrap.style.transformOrigin = 'top left';
-        // Give the container the correct scaled height so rows below don't overlap
-        requestAnimationFrame(() => {
-          wrap.parentElement.style.height = (table.offsetHeight * scale) + 'px';
-        });
-      }
-    }
-  });
 }
-
 
 function exportAttendancePDF() {
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
