@@ -1138,8 +1138,12 @@
     data['att_processed'] = JSON.stringify(_ld.attProcessed || {});
     data['weekoff_settings'] = JSON.stringify(_ld.weekoff || null);
     data['db_snapshots'] = JSON.stringify(_ld.dbEntries || []);
+    // FIX 1: Persist selected shift to cloud
+    data['user_shift'] = localStorage.getItem('userShift') || 'morning';
     try {
       await window._fbFns.setDoc(window._fbFns.doc(db, 'userData', user.uid), data, { merge: true });
+      // FIX 6: Ping other tabs to pull the latest data
+      localStorage.setItem('wp_sync_ping', String(Date.now()));
     } catch(e) { console.warn('Save failed:', e); }
   };
 
@@ -1183,6 +1187,12 @@
         const el = document.getElementById(id);
         if (el && data[id] !== undefined) el.value = data[id];
       });
+      // FIX 1: Restore shift from cloud
+      if (data['user_shift'] && window.SHIFT_TIMINGS && window.SHIFT_TIMINGS[data['user_shift']]) {
+        window._userShift = data['user_shift'];
+        localStorage.setItem('userShift', data['user_shift']);
+        if (typeof window.settingsSaveShift === 'function') window.settingsSaveShift(data['user_shift']);
+      }
       // Restore attendance data from Firestore
       // Apply all cloud data via window callback (avoids module scope vs regular scope issues)
       if (typeof window._applyCloudData === 'function') {
@@ -1668,7 +1678,7 @@ body.dark .att-calendar th, body.dark .att-calendar td { border-color: #2a3340; 
   background: #2E4A62 !important;
   color: #E8F0F8 !important;
   font-family: 'Lexend', sans-serif !important;
-  font-size: 13px !important;
+  font-size: 10px !important;  /* FIX 4: match day-header font size (was 13px) */
   font-weight: 700 !important;
   text-align: left !important;
   padding: 0 14px !important;
@@ -1709,7 +1719,7 @@ body.dark .att-cell.empty { background: #0e1620 !important; }
   }
   .att-calendar thead th { font-size: 12px; }
   .att-calendar th.year-header { font-size: 16px; letter-spacing: 4px; }
-  .att-month-label { font-size: 14px !important; }
+  .att-month-label { font-size: 12px !important; } /* FIX 4: desktop = same as day headers */
   .att-cell { font-size: 14px; }
 }
 /* Alternating month row backgrounds */
@@ -2531,8 +2541,7 @@ function getWeekLabel() {
 // Today's day name — shift-aware.
 // For shifts that cross midnight (Evening, Night), a working day = the calendar
 // day the shift STARTED on. So for an Evening worker, 00:00–01:30 AM is attributed
-// to the PREVIOUS calendar day. `_shiftExtending` lets a user keep logging to the
-// previous day even past the scheduled end (see Shift Extension popup).
+// to the PREVIOUS calendar day.
 function getTodayDayName() {
   const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
   // Explicit Start-Shift session locks the working day to its start date.
@@ -2553,12 +2562,6 @@ function getTodayDayName() {
     const t = (typeof SHIFT_TIMINGS !== 'undefined') ? SHIFT_TIMINGS[shift] : null;
     if (t && t.endCrossesMidnight) {
       const mins = now.getHours() * 60 + now.getMinutes();
-      // The working day for a cross-midnight shift rolls over at the NEXT
-      // shift's START time (e.g. 4 PM for Evening, 9 PM for Night). Any moment
-      // before that on the calendar day still belongs to yesterday's shift.
-      // This keeps balances stable from shift-start through past midnight
-      // until the user reaches the natural next shift start — matching what a
-      // shift worker intuitively considers "today".
       if (mins < t.startMin) {
         dayIdx = (dayIdx + 6) % 7; // rollback 1 day
       }
@@ -2567,10 +2570,35 @@ function getTodayDayName() {
   return days[dayIdx];
 }
 
-// Working day number (1=Sun...5=Thu in this system; based on day name)
+// FIX 2: Map today's full day name → the HTML row ID that currently represents it.
+// updateWorkingDayRows() stamps data-actual-day on each row so we can reverse-lookup.
+// This ensures "today's column" is always correct regardless of weekoff configuration.
+function getTodayRowId() {
+  const DAY_ABBR = {
+    SATURDAY:'sat', SUNDAY:'sun', MONDAY:'mon',
+    TUESDAY:'tue', WEDNESDAY:'wed', THURSDAY:'thu', FRIDAY:'fri'
+  };
+  const todayAbbr = DAY_ABBR[getTodayDayName()];
+  const tableRows = ['sun','mon','tue','wed','thu'];
+  for (const rowId of tableRows) {
+    const rowEl = document.getElementById('row_' + rowId);
+    if (rowEl && rowEl.dataset.actualDay === todayAbbr) return rowId;
+  }
+  // Fallback: direct match (default Mon-Fri layout)
+  return (todayAbbr && DAYS.includes(todayAbbr)) ? todayAbbr : 'sun';
+}
+
+// Working day number — FIX 2: dynamically derived from user's weekOffDays.
+// Builds an ordered list of working days (Sat-Fri order minus weekoffs) and
+// returns 1-based position of today's day in that list.
 function getWorkingDayNum() {
-  const map = {SUNDAY:1,MONDAY:2,TUESDAY:3,WEDNESDAY:4,THURSDAY:5};
-  return map[getTodayDayName()] || 1;
+  const todayName = getTodayDayName();
+  // ALL_DAYS_ORDER is sat,sun,mon,tue,wed,thu,fri
+  const workDays = ALL_DAYS_ORDER.filter(d => !weekOffDays.has(d)); // 5 working days in Sat-Fri order
+  const DAY_ABBR = { SATURDAY:'sat', SUNDAY:'sun', MONDAY:'mon', TUESDAY:'tue', WEDNESDAY:'wed', THURSDAY:'thu', FRIDAY:'fri' };
+  const todayAbbr = DAY_ABBR[todayName];
+  const idx = workDays.indexOf(todayAbbr);
+  return idx >= 0 ? idx + 1 : 1;
 }
 
 // Days in order
@@ -2667,17 +2695,27 @@ function applyUtilColor(elId, pct) {
 // Auto-calculate days left: enabled rows after today, min 1
 // Only sets the default once; user can override manually after that
 let _daysLeftUserEdited = false;
+// FIX 3: Snapshot of daysLeft+workingDays taken when shift starts; cleared on end.
+let _shiftLockedDaysLeft = null;
+let _shiftLockedWorkingDays = null;
 
 function autoCalcDaysLeft() {
+  // FIX 3: If a shift is active, use the locked snapshot — don't recalculate.
+  if (_shiftLockedDaysLeft !== null) {
+    const el = document.getElementById('daysLeft');
+    if (el) el.value = _shiftLockedDaysLeft;
+    return;
+  }
   if (_daysLeftUserEdited) return; // user has manually changed it — respect their value
 
-  const todayName = getTodayDayName();
-  const todayIdx = DAY_NAMES.indexOf(todayName);
-  if (todayIdx < 0) return;
+  // FIX 2: use getTodayRowId so we always look at the correct table row for today
+  const todayRowId = getTodayRowId();
+  const todayTableIdx = DAYS.indexOf(todayRowId);
+  if (todayTableIdx < 0) return;
 
   let daysAfterToday = 0;
   DAYS.forEach((d, i) => {
-    if (i > todayIdx) {
+    if (i > todayTableIdx) {
       const chk = document.getElementById('chk_' + d);
       if (chk && chk.checked) daysAfterToday++;
     }
@@ -2926,7 +2964,10 @@ function recalc() {
   // Working days (count checked boxes; half-days count as 0.5)
   const activeDays = DAYS.filter(d => document.getElementById('chk_' + d)?.checked);
   const halfCount = activeDays.filter(d => halfDays.has(d)).length;
-  const numDays = activeDays.length - halfCount * 0.5;
+  // FIX 3: Use locked working-days count while shift is active
+  const numDays = (_shiftLockedWorkingDays !== null)
+    ? parseFloat(_shiftLockedWorkingDays)
+    : (activeDays.length - halfCount * 0.5);
   const numDaysDisplay = Number.isInteger(numDays) ? numDays : numDays.toFixed(1);
   document.getElementById('workingDays').textContent = numDaysDisplay;
   document.getElementById('tot_days').textContent = numDaysDisplay;
@@ -3072,9 +3113,8 @@ function recalc() {
   setText('dw_w_aux',     fmtTime(wTotAux));
   setText('dw_w_util',    wTotUtil !== null ? fmtPct(wTotUtil) : '–');
 
-    // === TODAY's snapshot ===
-  const todayIdx = DAY_NAMES.indexOf(todayName);
-  const todayKey = todayIdx >= 0 ? DAYS[todayIdx] : 'sun';
+    // === TODAY's snapshot — FIX 5: use getTodayRowId() for correct column regardless of weekoffs ===
+  const todayKey = getTodayRowId(); // HTML row id (e.g. 'sun','mon') that represents today
   const tProdToday = getInputMins('prod_' + todayKey);
   const tCoachToday = getInputMins('coach_' + todayKey);
   const tMeetToday = getInputMins('meet_' + todayKey);
@@ -3169,16 +3209,19 @@ function recalc() {
   setHtml('today_bill_bal', todayBal(billDiff, false));
   setText('today_util_val', todayUtil);
 
-  // ── Logout time estimate ──
-  // Formula: current time + (today's billing target − billing done today)
-  // Normal days → target = tBilling (fixed daily billing target e.g. 8:31)
-  // Last day (daysLeft=1) → target = remTotal (whatever is left to finish the week)
+  // ── Logout time estimate — FIX 7 ──
+  // Formula: current time + billingNeededToday
+  //   • Any day except last: billingNeededToday = max(0, tBilling − doneMins)
+  //     (today's per-day target minus what's been logged today)
+  //   • Last day (daysLeft ≤ 1): billingNeededToday = max(0, remTotal)
+  //     (full remaining weekly balance to finish today)
+  // This always produces a real-time "you can leave at HH:MM" estimate.
   (function() {
-    // Update both desktop badge (logoutTimeBadge2) and any mobile badge (logoutTimeBadge)
     const doneMins = todayBillingActual;
+    // FIX 7: Always compute from TODAY's remaining, never from the whole week unless it IS the last day
     const remainMins = (daysLeft <= 1)
-      ? Math.max(0, remTotal)
-      : Math.max(0, tBilling - doneMins);
+      ? Math.max(0, remTotal)                   // last day — clear the full week balance today
+      : Math.max(0, tBilling - doneMins);        // any other day — just today's daily target deficit
     const badgeEls = ['logoutTimeBadge','logoutTimeBadge2'].map(id=>document.getElementById(id)).filter(Boolean);
     if (!badgeEls.length) return;
     const now = new Date();
@@ -3187,10 +3230,21 @@ function recalc() {
     const hh = lo.getHours(), mm = lo.getMinutes();
     const ampm = hh >= 12 ? 'PM' : 'AM';
     const hh12 = hh % 12 || 12;
-    const txt = (remainMins <= 0 && doneMins <= 0) ? '' : `Logout: ${hh12}:${String(mm).padStart(2,'0')} ${ampm}`;
+    // Show "Done ✓" when remainMins is 0 and there's real logged work; blank if nothing started
+    let txt;
+    if (doneMins <= 0 && remainMins <= 0) {
+      txt = '';
+    } else if (remainMins <= 0) {
+      txt = '🕐 Done ✓';
+    } else {
+      txt = `🕐 Logout: ${hh12}:${String(mm).padStart(2,'0')} ${ampm}`;
+    }
     const fmt = m => `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;
     const targetForTooltip = (daysLeft <= 1) ? remTotal : tBilling;
-    badgeEls.forEach(b => { b.textContent = txt; b.title = `Target: ${fmt(targetForTooltip)} | Done: ${fmt(doneMins)} | Left: ${fmt(remainMins)}`; });
+    badgeEls.forEach(b => {
+      b.textContent = txt;
+      b.title = `Target today: ${fmt(targetForTooltip)} | Done: ${fmt(doneMins)} | Remaining: ${fmt(remainMins)}`;
+    });
   })();
 
   // Color util green/red
@@ -3308,6 +3362,9 @@ function startShift() {
     workDayKey,
     shift: _userShift,
   });
+  // FIX 3: Lock Days Left and Working Days at the moment shift starts
+  _shiftLockedDaysLeft = parseInt(document.getElementById('daysLeft')?.value, 10) || 1;
+  _shiftLockedWorkingDays = document.getElementById('workingDays')?.textContent || '5';
   // Reset any prior implicit extend/close decision so it doesn't interfere.
   _resetShiftCloseState();
   _renderShiftButton();
@@ -3326,6 +3383,9 @@ function endShift() {
   // Clear the session BEFORE showing summary so dashboard rolls forward immediately.
   _writeShiftSession(null);
   _resetShiftCloseState();
+  // FIX 3: Release the Days Left / Working Days lock
+  _shiftLockedDaysLeft = null;
+  _shiftLockedWorkingDays = null;
   _renderShiftButton();
   recalc();
   showShiftSummaryPopup(session, endMs, hh, mm);
@@ -3506,6 +3566,9 @@ function endShiftSilent() {
   const hh = Math.floor(elapsedMins / 60);
   const mm = elapsedMins % 60;
   _writeShiftSession(null);
+  // FIX 3: Release Days Left / Working Days lock
+  _shiftLockedDaysLeft = null;
+  _shiftLockedWorkingDays = null;
   _renderShiftButton();
   recalc();
   showShiftSummaryPopup(session, endMs, hh, mm);
@@ -4452,6 +4515,8 @@ function updateWorkingDayRows() {
       const label = rowEl.querySelector('td.left');
       if (label) label.textContent = (rowDayNames[actualDay] || actualDay.toUpperCase());
       rowEl.dataset.actualDay = actualDay;
+      // FIX 2: also tag the row with its working-day position (1-based) for column highlight
+      rowEl.dataset.workDayPos = String(i + 1);
     }
     // Update checkbox — do NOT reset; preserve user's checked state
     const chk = document.getElementById('chk_' + rowId);
@@ -4590,6 +4655,20 @@ window.addEventListener('load', () => {
     inp.addEventListener('blur', function() {
       if (this.value !== this._preVal) _snapshotState && _snapshotState('Edit ' + (this.id || 'field'));
     });
+  });
+  // FIX 6: Cross-tab sync via storage event.
+  // When Tab A writes to Firestore and also updates a localStorage "sync_ping" key,
+  // Tab B picks it up here and re-fetches from Firestore automatically.
+  window.addEventListener('storage', async (e) => {
+    // We watch a special ping key rather than every key to avoid thrashing
+    if (e.key !== 'wp_sync_ping') return;
+    const user = window._fbAuth && window._fbAuth.currentUser;
+    if (!user || !window._dataLoaded) return;
+    try {
+      await window.loadUserData(user.uid);
+      if (window.recalc) window.recalc();
+      if (typeof renderDbEntries === 'function') renderDbEntries();
+    } catch(ex) { /* silent */ }
   });
 });
 
