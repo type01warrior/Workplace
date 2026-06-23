@@ -1167,7 +1167,7 @@
           if (el) el.value = '0';
         });
         if (window.recalc) window.recalc();
-        openOnboarding();
+        if (typeof window.openOnboarding === 'function') window.openOnboarding();
         return;
       }
       const data = snap.data();
@@ -1190,7 +1190,9 @@
       // FIX 1: Restore selected shift from cloud
       if (data['user_shift'] && window.SHIFT_TIMINGS && window.SHIFT_TIMINGS[data['user_shift']]) {
         window._userShift = data['user_shift'];
+        if (typeof window._userShiftSetter === 'function') window._userShiftSetter(data['user_shift']); // update regular scope via exposed setter
         localStorage.setItem('userShift', data['user_shift']);
+        window._cloudShiftRestored = true; // prevent load listener from overwriting
         if (typeof window.settingsSaveShift === 'function') window.settingsSaveShift(data['user_shift']);
       }
       // Restore attendance data from Firestore
@@ -1201,7 +1203,7 @@
       if (data['att_processed']) {
         try {
           const ap = JSON.parse(data['att_processed']);
-          if (ap && lsSet) lsSet('att_processed_weeks', ap);
+          if (ap && window.lsSet) window.lsSet('att_processed_weeks', ap);
         } catch(e) {}
       }
 
@@ -1230,14 +1232,14 @@
           if (nameEl) nameEl.textContent = displayName;
         }
       } catch(e) { /* silently ignore, fallback already set */ }
-      initUserStorage(user.uid);
+      if (typeof window.initUserStorage === 'function') window.initUserStorage(user.uid);
       await window.loadUserData(user.uid);
       window._dataLoaded = true; // safe to save now
       if (window.recalc) window.recalc();
       // auto-save every 30s
       window._autoSaveInterval = setInterval(() => { if (window._dataLoaded) window.saveUserData(); }, 30000);
     } else {
-      _currentUid = null;
+      if (window._clearCurrentUid) window._clearCurrentUid();
       document.getElementById('authOverlay').style.display = 'flex';
       document.getElementById('mainApp').style.display = 'none';
       clearInterval(window._autoSaveInterval);
@@ -2607,14 +2609,15 @@ function toggleView() {
   const btn = document.getElementById('toggleBtn');
   const lbl = document.getElementById('toggleLabel');
   const vlbl = document.getElementById('viewLabel');
+  const p3lbl = document.getElementById('p3Label'); // optional element — null-safe
   if (isBilling) {
-    btn.classList.add('billing');
-    lbl.textContent = 'BILLING';
+    btn && btn.classList.add('billing');
+    if (lbl) lbl.textContent = 'BILLING';
     if (p3lbl) p3lbl.textContent = 'BILLING';
     if (vlbl) vlbl.textContent = 'BILLING';
   } else {
-    btn.classList.remove('billing');
-    lbl.textContent = 'DAY/BILLING';
+    btn && btn.classList.remove('billing');
+    if (lbl) lbl.textContent = 'DAY/BILLING';
     if (p3lbl) p3lbl.textContent = 'DAY/BILLING';
     if (vlbl) vlbl.textContent = 'DAY/BILLING';
   }
@@ -2708,15 +2711,19 @@ function autoCalcDaysLeft() {
   const todayTableIdx = TABLE_ROWS.indexOf(todayRowId);
   if (todayTableIdx < 0) return;
 
-  let daysAfterToday = 0;
+  // Count today (if checked and not a full-day leave) + all remaining checked days after today
+  let daysLeft = 0;
   TABLE_ROWS.forEach((d, i) => {
-    if (i > todayTableIdx) {
+    if (i >= todayTableIdx) {
       const chk = document.getElementById('chk_' + d);
-      if (chk && chk.checked) daysAfterToday++;
+      if (chk && chk.checked) {
+        // Half-day counts as 0.5
+        daysLeft += halfDays.has(d) ? 0.5 : 1;
+      }
     }
   });
 
-  const val = Math.max(1, daysAfterToday);
+  const val = Math.max(0, Math.round(daysLeft)); // allow 0 (week done), no artificial min of 1
   const el = document.getElementById('daysLeft');
   if (el) el.value = val;
 }
@@ -2760,84 +2767,234 @@ function onDayToggle(chkEl, day) {
 function _showHalfFullPrompt(day, chkEl) {
   document.getElementById('halfFullPopup')?.remove();
   const isDark = document.body.classList.contains('dark');
-  const bg = isDark ? '#1a1a1a' : '#fff';
-  const border = isDark ? '#333' : '#1C2B3A';
-  const txt = isDark ? '#e8e8e8' : '#1C2B3A';
-  const dayLabel = day.toUpperCase();
+  const bg    = isDark ? '#1a1a1a' : '#fff';
+  const bdr   = isDark ? '#444'    : '#1C2B3A';
+  const txt   = isDark ? '#e8e8e8' : '#1C2B3A';
+  const sub   = isDark ? '#aaa'    : '#666';
+  const divC  = isDark ? '#333'    : '#e8edf2';
+
+  const rowEl   = document.getElementById('row_' + day);
+  const dayFull = (rowEl && rowEl.querySelector('td.left'))
+                  ? rowEl.querySelector('td.left').textContent.trim()
+                  : day.toUpperCase();
+  const dateKey = getDayDateKey(day);
+
+  // Leave type definitions
+  const leaveTypes = [
+    { code:'UL', label:'Unplanned Leave', color:'#e74c3c', icon:'⚡' },
+    { code:'PL', label:'Planned Leave',   color:'#f0ad4e', icon:'📅' },
+    { code:'SL', label:'Sick Leave',      color:'#3498db', icon:'🤒' },
+  ];
+
   const popup = document.createElement('div');
   popup.id = 'halfFullPopup';
-  popup.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:${bg};border:2px solid ${border};border-radius:12px;padding:20px 24px;z-index:99999;min-width:280px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.35);font-family:Lexend,sans-serif;`;
+  popup.style.cssText = `
+    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:${bg};border:2px solid ${bdr};border-radius:16px;
+    padding:0;z-index:99999;
+    width:min(340px,92vw);
+    box-shadow:0 16px 48px rgba(0,0,0,0.45);
+    font-family:Lexend,sans-serif;
+    overflow:hidden;
+  `;
+
+  // Build leave-type buttons for step 2
+  function leaveBtnsHTML(mode) {
+    const halfNote = mode === 'half'
+      ? '<div style="font-size:8px;color:#9b59b6;font-weight:700;margin-bottom:10px;padding:6px 10px;background:#9b59b614;border-radius:7px;border:1px solid #9b59b633;">½ Half Day — targets halved, row stays active</div>'
+      : '<div style="font-size:8px;color:#e74c3c;font-weight:700;margin-bottom:10px;padding:6px 10px;background:#e74c3c14;border-radius:7px;border:1px solid #e74c3c33;">Full Day Off — row disabled, full day deducted</div>';
+    const btns = leaveTypes.map(lt => `
+      <button onclick="_applyLeave('${day}','${mode}','${lt.code}')"
+        style="flex:1;min-width:0;padding:12px 4px 10px;
+               font-family:Lexend,sans-serif;font-size:10px;font-weight:700;
+               background:${lt.color}14;color:${lt.color};
+               border:2px solid ${lt.color};border-radius:10px;
+               cursor:pointer;line-height:1.5;transition:background 0.15s;
+               -webkit-tap-highlight-color:transparent;">
+        <div style="font-size:16px;margin-bottom:3px;">${lt.icon}</div>
+        <div style="font-size:11px;font-weight:900;">${lt.code}</div>
+        <div style="font-size:8px;font-weight:400;opacity:0.9;margin-top:1px;">${lt.label}</div>
+      </button>`).join('');
+    return halfNote + `<div style="display:flex;gap:7px;">${btns}</div>`;
+  }
+
   popup.innerHTML = `
-    <div style="font-size:11px;font-weight:700;color:${txt};margin-bottom:4px;">${dayLabel} — Off Type</div>
-    <div style="font-size:9px;color:#888;margin-bottom:16px;">Is this a half day or a full day off?</div>
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button onclick="_applyHalfDay('${day}')"
-        style="flex:1;padding:12px 6px;font-family:Lexend,sans-serif;font-size:11px;font-weight:700;background:#9b59b622;color:#9b59b6;border:2px solid #9b59b6;border-radius:8px;cursor:pointer;line-height:1.3;">
-        ½ HALF DAY<br><span style="font-size:8px;font-weight:400;opacity:0.85;">Counts as 0.5 day · targets halved</span>
-      </button>
-      <button onclick="_chooseFullDay('${day}')"
-        style="flex:1;padding:12px 6px;font-family:Lexend,sans-serif;font-size:11px;font-weight:700;background:#e74c3c22;color:#e74c3c;border:2px solid #e74c3c;border-radius:8px;cursor:pointer;line-height:1.3;">
-        FULL DAY<br><span style="font-size:8px;font-weight:400;opacity:0.85;">Pick PL / UL / HL / SL</span>
-      </button>
+    <!-- Header bar -->
+    <div style="background:${bdr};padding:14px 18px 12px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#fff;letter-spacing:0.3px;">${dayFull}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.65);margin-top:1px;">${dateKey || 'this day'} · Mark leave</div>
+      </div>
+      <button onclick="_cancelHalfFull('${day}')"
+        style="background:rgba(255,255,255,0.15);border:none;border-radius:8px;
+               width:28px;height:28px;cursor:pointer;color:#fff;font-size:14px;
+               display:flex;align-items:center;justify-content:center;
+               -webkit-tap-highlight-color:transparent;">✕</button>
     </div>
-    <button onclick="_cancelHalfFull('${day}')"
-      style="width:100%;padding:8px;font-family:Lexend,sans-serif;font-size:10px;font-weight:700;background:transparent;border:1.5px solid #ccd6e0;border-radius:8px;cursor:pointer;color:#888;">
-      Cancel (keep day ON)
-    </button>`;
+
+    <!-- Body -->
+    <div style="padding:16px 18px 18px;">
+
+      <!-- Step 1: Half or Full -->
+      <div id="hfStep1_${day}">
+        <div style="font-size:9px;font-weight:700;color:${sub};letter-spacing:0.6px;margin-bottom:10px;text-transform:uppercase;">How much leave?</div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <button onclick="_hfShowLeave('${day}','half')"
+            style="flex:1;padding:16px 6px;font-family:Lexend,sans-serif;font-size:11px;font-weight:700;
+                   background:#9b59b614;color:#9b59b6;border:2px solid #9b59b6;
+                   border-radius:12px;cursor:pointer;line-height:1.5;
+                   -webkit-tap-highlight-color:transparent;">
+            <div style="font-size:24px;margin-bottom:4px;">½</div>
+            <div style="font-size:12px;font-weight:900;">HALF DAY</div>
+            <div style="font-size:8px;font-weight:400;opacity:0.85;margin-top:3px;">Worked half · 0.5 day<br>Daily target halved</div>
+          </button>
+          <button onclick="_hfShowLeave('${day}','full')"
+            style="flex:1;padding:16px 6px;font-family:Lexend,sans-serif;font-size:11px;font-weight:700;
+                   background:#e74c3c14;color:#e74c3c;border:2px solid #e74c3c;
+                   border-radius:12px;cursor:pointer;line-height:1.5;
+                   -webkit-tap-highlight-color:transparent;">
+            <div style="font-size:24px;margin-bottom:4px;">✕</div>
+            <div style="font-size:12px;font-weight:900;">FULL DAY</div>
+            <div style="font-size:8px;font-weight:400;opacity:0.85;margin-top:3px;">Full leave · row off<br>Full day deducted</div>
+          </button>
+        </div>
+        <div style="height:1px;background:${divC};margin-bottom:12px;"></div>
+        <button onclick="_cancelHalfFull('${day}')"
+          style="width:100%;padding:9px;font-family:Lexend,sans-serif;font-size:10px;font-weight:700;
+                 background:transparent;border:1.5px solid ${divC};
+                 border-radius:9px;cursor:pointer;color:${sub};
+                 -webkit-tap-highlight-color:transparent;">
+          Cancel — keep day ON
+        </button>
+      </div>
+
+      <!-- Step 2: Leave type -->
+      <div id="hfStep2_${day}" style="display:none;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <button onclick="_hfBackToStep1('${day}')"
+            style="background:${isDark?'#2a2a2a':'#f0f4f8'};border:none;cursor:pointer;
+                   color:${sub};font-size:12px;padding:5px 10px;
+                   border-radius:7px;font-family:Lexend,sans-serif;font-weight:700;
+                   -webkit-tap-highlight-color:transparent;">← Back</button>
+          <div style="font-size:9px;font-weight:700;color:${sub};letter-spacing:0.5px;text-transform:uppercase;"
+               id="hfStep2Label_${day}"></div>
+        </div>
+        <div style="font-size:9px;font-weight:700;color:${sub};letter-spacing:0.6px;margin-bottom:10px;text-transform:uppercase;">Select leave type</div>
+        <div id="hfLeaveBtns_${day}"></div>
+      </div>
+
+    </div>
+  `;
+
   document.body.appendChild(popup);
+
+  // Store builder on popup element for step-2 injection
+  popup._leaveBtns = leaveBtnsHTML;
 }
 
-function _applyHalfDay(day) {
-  const chk = document.getElementById('chk_' + day);
-  if (chk) chk.checked = true; // half day = still working, just counts as 0.5
-  halfDays.add(day);
-  lsSet('half_days', [...halfDays]);
-  setHalfDayBadge(day, true);
-  const dateKey = getDayDateKey(day);
-  if (dateKey) {
-    attData[dateKey] = 'HL';
-    lsSet('att_data', attData);
-    if (document.getElementById('attendanceModal')?.classList.contains('open')) {
-      if (typeof renderAttCalendar === 'function') renderAttCalendar();
-    }
+// Called when user picks Half or Full in step 1 — slide to step 2
+function _hfShowLeave(day, mode) {
+  const popup = document.getElementById('halfFullPopup');
+  if (!popup) return;
+  const step1 = document.getElementById('hfStep1_' + day);
+  const step2 = document.getElementById('hfStep2_' + day);
+  const label = document.getElementById('hfStep2Label_' + day);
+  const btnsContainer = document.getElementById('hfLeaveBtns_' + day);
+
+  if (step1) step1.style.display = 'none';
+  if (step2) step2.style.display = '';
+  if (label) label.textContent = mode === 'half' ? '½ Half Day' : 'Full Day Off';
+  if (btnsContainer && popup._leaveBtns) {
+    btnsContainer.innerHTML = popup._leaveBtns(mode);
   }
+  popup._currentMode = mode;
+}
+
+function _hfBackToStep1(day) {
+  const step1 = document.getElementById('hfStep1_' + day);
+  const step2 = document.getElementById('hfStep2_' + day);
+  if (step1) step1.style.display = '';
+  if (step2) step2.style.display = 'none';
+}
+
+// Final apply: mode = 'half' | 'full', leaveCode = 'UL' | 'PL' | 'SL'
+function _applyLeave(day, mode, leaveCode) {
   document.getElementById('halfFullPopup')?.remove();
+
+  const chk     = document.getElementById('chk_' + day);
+  const dateKey = getDayDateKey(day);
+
+  if (mode === 'half') {
+    // Half day: checkbox stays ON (row active), counts as 0.5 working day
+    if (chk) chk.checked = true;
+    halfDays.add(day);
+    lsSet('half_days', [...halfDays]);
+    setHalfDayBadge(day, true);
+    // Record leave type in attendance (HL prefix + leave code stored as e.g. "HL_UL")
+    // We store just 'HL' for calendar display but keep the leaveCode in a side map
+    if (dateKey) {
+      // Store as "HL" in attData (calendar shows HL badge)
+      attData[dateKey] = 'HL';
+      lsSet('att_data', attData);
+    }
+    // Store full detail (HL + type) for reference
+    const halfLeaveMap = lsGet('half_leave_types', '{}');
+    halfLeaveMap[day] = leaveCode; // e.g. { mon: 'UL' }
+    lsSet('half_leave_types', halfLeaveMap);
+
+  } else {
+    // Full day: checkbox turns OFF, row disabled, full day deducted from targets
+    if (halfDays.has(day)) {
+      halfDays.delete(day);
+      setHalfDayBadge(day, false);
+      lsSet('half_days', [...halfDays]);
+    }
+    if (chk) chk.checked = false;
+    if (dateKey) {
+      attData[dateKey] = leaveCode;
+      lsSet('att_data', attData);
+    }
+    // Clear any half-leave-type for this day
+    const halfLeaveMap = lsGet('half_leave_types', '{}');
+    delete halfLeaveMap[day];
+    lsSet('half_leave_types', halfLeaveMap);
+  }
+
+  // Re-render attendance calendar if open
+  if (document.getElementById('attendanceModal')?.classList.contains('open')) {
+    if (typeof renderAttCalendar === 'function') renderAttCalendar();
+  }
+
   recalc();
   if (window.saveUserData) window.saveUserData();
 }
 
-function _chooseFullDay(day) {
-  document.getElementById('halfFullPopup')?.remove();
-  if (halfDays.has(day)) {
-    halfDays.delete(day);
-    setHalfDayBadge(day, false);
-    lsSet('half_days', [...halfDays]);
-  }
-  const chk = document.getElementById('chk_' + day);
-  _showLeavePickerForDay(day, chk);
-}
-
-function _cancelHalfFull(day) {
-  const chk = document.getElementById('chk_' + day);
-  if (chk) chk.checked = true;
-  document.getElementById('halfFullPopup')?.remove();
-  recalc();
-}
-
 function getDayDateKey(day) {
-  // Map day name to actual date in current week
-  const DAY_JS = { sun:0, mon:1, tue:2, wed:3, thu:4 };
-  const jsDay = DAY_JS[day];
+  // `day` is the HTML row id ('sun','mon','tue','wed','thu').
+  // With weekoff remapping, each row may represent a DIFFERENT actual calendar day.
+  // We must look up the row's dataset.actualDay to get the real day abbreviation,
+  // then compute its date in the current SAT-FRI week.
+
+  // Get actual calendar day for this HTML row (set by updateWorkingDayRows)
+  const rowEl = document.getElementById('row_' + day);
+  const actualDayAbbr = (rowEl && rowEl.dataset.actualDay) ? rowEl.dataset.actualDay : day;
+
+  // Full mapping: abbr → JS day-of-week index (0=Sun)
+  const ABBR_TO_JS = { sat:6, sun:0, mon:1, tue:2, wed:3, thu:4, fri:5 };
+  const jsDay = ABBR_TO_JS[actualDayAbbr];
   if (jsDay === undefined) return null;
+
+  // Find the Saturday that starts this SAT-FRI week
   const today = new Date();
   const todayJs = today.getDay();
-  // Find the Saturday that starts this week
-  const daysFromSat = (todayJs === 6) ? 0 : (todayJs + 1); // sat=6 in JS
+  const daysFromSat = (todayJs === 6) ? 0 : (todayJs + 1); // sat=6 in JS → offset 0
   const sat = new Date(today);
   sat.setDate(today.getDate() - daysFromSat);
-  // day offset from Saturday: sat=0,sun=1,mon=2,tue=3,wed=4,thu=5,fri=6
-  const POS_FROM_SAT = { sun:1, mon:2, tue:3, wed:4, thu:5 };
-  const offset = POS_FROM_SAT[day];
+  sat.setHours(0,0,0,0);
+
+  // Offset from Saturday for each day (Sat=0, Sun=1, Mon=2, Tue=3, Wed=4, Thu=5, Fri=6)
+  const JS_TO_OFFSET = { 6:0, 0:1, 1:2, 2:3, 3:4, 4:5, 5:6 };
+  const offset = JS_TO_OFFSET[jsDay];
   const target = new Date(sat);
   target.setDate(sat.getDate() + offset);
   const y = target.getFullYear();
@@ -2846,72 +3003,28 @@ function getDayDateKey(day) {
   return `${y}-${m}-${d}`;
 }
 
+// Legacy stub — kept for any external reference, delegates to unified flow
 function _showLeavePickerForDay(day, chkEl) {
-  const old = document.getElementById('leavePickerPopup');
-  if (old) old.remove();
-
-  const isDark = document.body.classList.contains('dark');
-  const bg = isDark ? '#1a1a1a' : '#fff';
-  const border = isDark ? '#333' : '#1C2B3A';
-  const txt = isDark ? '#e8e8e8' : '#1C2B3A';
-
-  const dayLabel = day.toUpperCase();
-  const dateKey = getDayDateKey(day);
-
-  const popup = document.createElement('div');
-  popup.id = 'leavePickerPopup';
-  popup.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:${bg};border:2px solid ${border};border-radius:12px;padding:20px 24px;z-index:99999;min-width:260px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.35);font-family:Lexend,sans-serif;`;
-
-  // Full-day submenu only — HL (Half-day Leave) is intentionally excluded here.
-  // Half-day is handled via the "½ HALF DAY" option in the preceding Half/Full prompt.
-  const leaveTypes = [
-    { code:'PL', label:'Planned Leave',   color:'#f0ad4e' },
-    { code:'UL', label:'Unplanned Leave', color:'#e74c3c' },
-    { code:'SL', label:'Sick Leave',      color:'#3498db' },
-  ];
-
-  const btns = leaveTypes.map(lt => 
-    `<button onclick="_applyLeaveForDay('${day}','${lt.code}',this)" 
-      style="flex:1;min-width:48%;padding:10px 4px;font-family:Lexend,sans-serif;font-size:10px;font-weight:700;
-             background:${lt.color}22;color:${lt.color};border:2px solid ${lt.color};border-radius:8px;cursor:pointer;line-height:1.3;">
-       <strong>${lt.code}</strong><br><span style="font-size:8px;font-weight:400;opacity:0.85;">${lt.label}</span>
-     </button>`
-  ).join('');
-
-  popup.innerHTML = `
-    <div style="font-size:11px;font-weight:700;color:${txt};margin-bottom:4px;">${dayLabel} — Mark Leave</div>
-    <div style="font-size:9px;color:#888;margin-bottom:16px;">${dateKey || 'this day'} · Day will be disabled</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">${btns}</div>
-    <button onclick="_cancelLeavePicker('${day}')" 
-      style="width:100%;padding:8px;font-family:Lexend,sans-serif;font-size:10px;font-weight:700;
-             background:transparent;border:1.5px solid #ccd6e0;border-radius:8px;cursor:pointer;color:#888;">
-      Cancel (keep day ON)
-    </button>`;
-
-  document.body.appendChild(popup);
-  popup._chkEl = chkEl; // store ref
+  _hfShowLeave(day, 'full');
 }
 
-function _applyLeaveForDay(day, leaveCode, btnEl) {
-  const dateKey = getDayDateKey(day);
-  if (dateKey) {
-    attData[dateKey] = leaveCode;
-    lsSet('att_data', attData);
-    // trigger re-render if attendance is open
-    if (document.getElementById('attendanceModal')?.classList.contains('open')) {
-      if (typeof renderAttCalendar === 'function') renderAttCalendar();
-    }
-  }
-  document.getElementById('leavePickerPopup')?.remove();
-  recalc();
-  if (window.saveUserData) window.saveUserData();
+function _applyLeaveForDay(day, leaveCode) {
+  _applyLeave(day, 'full', leaveCode);
 }
 
 function _cancelLeavePicker(day) {
-  // Re-enable the checkbox since user cancelled
   const chk = document.getElementById('chk_' + day);
   if (chk) chk.checked = true;
+  document.getElementById('halfFullPopup')?.remove();
   document.getElementById('leavePickerPopup')?.remove();
+  recalc();
+}
+
+// Cancel: restore the checkbox to checked and close popup
+function _cancelHalfFull(day) {
+  const chk = document.getElementById('chk_' + day);
+  if (chk) chk.checked = true; // restore — user cancelled
+  document.getElementById('halfFullPopup')?.remove();
   recalc();
 }
 
@@ -3031,11 +3144,14 @@ function recalc() {
   setText('r_total', fmtTime(Math.round(qTotal)));
 
   // === TARGETS ===
-  // Daily targets from Q values / 5 working days, scaled by actual days
-  const tProd = Math.round(qProd / 5);
-  const tCoach = Math.round(qCoach / 5);
-  const tMeet = Math.round(qMeet / 5);
-  const tWell = Math.round(qWell / 5);
+  // Daily targets = weekly Q values divided by ACTUAL working days this week
+  // (numDays already accounts for half-days at 0.5 and full-day leaves).
+  // This means DAY/BILLING column updates automatically when leaves are marked.
+  const effectiveDays = numDays > 0 ? numDays : 1; // avoid division by zero
+  const tProd  = Math.round(qProd  / effectiveDays);
+  const tCoach = Math.round(qCoach / effectiveDays);
+  const tMeet  = Math.round(qMeet  / effectiveDays);
+  const tWell  = Math.round(qWell  / effectiveDays);
   const tTotAux = tCoach + tMeet + tWell;
   const tBilling = tProd + tTotAux;
   const tUtil = tBilling > 0 ? tProd / tBilling : null;
@@ -3275,6 +3391,8 @@ const SHIFT_TIMINGS = {
   evening: { label:'Evening', icon:'🌙', startMin: 16*60,      endMin:  1*60 + 30, endCrossesMidnight: true,  rangeText:'4:00 PM – 1:30 AM'  },
   night:   { label:'Night',   icon:'🌑', startMin: 21*60,      endMin:  6*60 + 30, endCrossesMidnight: true,  rangeText:'9:00 PM – 6:30 AM'  },
 };
+// Expose on window so cloud-restore code (module scope) can access it
+window.SHIFT_TIMINGS = SHIFT_TIMINGS;
 const SHIFT_KEYS = ['morning','evening','night'];
 
 function getShiftTiming(shift) {
@@ -4406,7 +4524,10 @@ function lsSet(key, val) { localStorage.setItem(lsKey(key), JSON.stringify(val))
 
 // Call on login to init uid-scoped storage
 function initUserStorage(uid) {
-  _daysLeftUserEdited = false; // reset on login/reload — auto-calc will run fresh
+  // Reset user-edit flag only for a FRESH login (uid change), not on data refreshes
+  if (_currentUid !== uid) {
+    _daysLeftUserEdited = false; // reset on actual user switch — auto-calc will run fresh
+  }
   _currentUid = uid;
   // Re-init attData and dbEntries from this user's scoped keys
   attData = lsGet('att_data', '{}');
@@ -4500,7 +4621,26 @@ function updateWorkingDayRows() {
   });
 }
 
-// ===== IST CLOCK (UTC+5:30) =====
+// ===== WINDOW EXPOSURES (needed by module-scope Firebase code) =====
+// The Firebase <script type="module"> cannot directly access variables/functions
+// in a regular <script>. We expose everything it needs via window.*.
+window.recalc = recalc;
+window.openOnboarding = openOnboarding;
+window.initUserStorage = initUserStorage;
+window.settingsSaveShift = settingsSaveShift;
+window.lsSet = lsSet;
+window.lsGet = lsGet;
+// Setter for _userShift — lets module update the outer-scope variable safely
+window._userShiftSetter = function(shift) {
+  if (SHIFT_TIMINGS[shift]) {
+    _userShift = shift;
+    window._userShift = shift;
+  }
+};
+// Lets module clear _currentUid on logout
+window._clearCurrentUid = function() { _currentUid = null; };
+
+
 function getISTTime() {
   const now = new Date();
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
@@ -4602,8 +4742,15 @@ window.addEventListener('load', () => {
   // Also run one check shortly after load in case the user opens the app exactly at shift end
   setTimeout(() => { try { checkShiftEndPopup(); } catch(e) {} }, 2000);
 
-  // Load saved shift
-  _userShift = localStorage.getItem('userShift') || 'morning';
+  // Load saved shift — only if cloud restore hasn't already updated it
+  // (loadUserData sets _userShift + localStorage before this runs for returning users;
+  //  for first-load/offline we still fall back to localStorage)
+  if (!window._cloudShiftRestored) {
+    _userShift = localStorage.getItem('userShift') || _userShift;
+    if (!SHIFT_TIMINGS[_userShift]) _userShift = 'morning';
+  }
+  // Always repaint shift buttons to reflect current _userShift
+  if (typeof settingsSaveShift === 'function') settingsSaveShift(_userShift);
 
   // Evening shift only: double-click on PRODUCTION inputs opens 3-input split popup
   document.querySelectorAll('input.dur').forEach(inp => {
@@ -4805,15 +4952,40 @@ async function authSignIn() {
   const identifier = document.getElementById('si-identifier').value.trim();
   const password = document.getElementById('si-password').value;
   const errEl = document.getElementById('si-error');
-  errEl.textContent = 'Signing in...';
+
+  // Validate fields FIRST, then show status
   if (!identifier || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
+  errEl.textContent = 'Signing in...';
+  errEl.style.color = '#888'; // neutral colour while loading
+
   try {
-    const email = await authLookupEmail(identifier);
-    if (!email) { errEl.textContent = 'No account found with that username or mobile.'; return; }
+    // Step 1: resolve identifier to email
+    let email = await authLookupEmail(identifier);
+
+    // Step 2: if lookup returned null (Firestore blocked or username not found),
+    // try treating the identifier itself as an email for direct sign-in
+    if (!email) {
+      if (identifier.includes('@')) {
+        email = identifier; // already an email — try directly
+      } else {
+        errEl.style.color = '#c0392b';
+        errEl.textContent = 'No account found with that username or mobile.';
+        return;
+      }
+    }
+
     await window._fbFns.signInWithEmailAndPassword(window._fbAuth, email, password);
     errEl.textContent = '';
   } catch(e) {
-    const msgs = { 'auth/user-not-found': 'No account found.', 'auth/wrong-password': 'Incorrect password.', 'auth/invalid-credential': 'Incorrect password.', 'auth/too-many-requests': 'Too many attempts. Try later.' };
+    errEl.style.color = '#c0392b';
+    const msgs = {
+      'auth/user-not-found':      'No account found with this email.',
+      'auth/wrong-password':      'Incorrect password.',
+      'auth/invalid-credential':  'Incorrect email or password.',
+      'auth/invalid-email':       'Invalid email address.',
+      'auth/too-many-requests':   'Too many attempts. Please wait and try again.',
+      'auth/network-request-failed': 'Network error. Check your connection.',
+    };
     errEl.textContent = msgs[e.code] || e.message;
   }
 }
